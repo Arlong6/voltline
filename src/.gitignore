@@ -1,0 +1,11 @@
+# Godot 4+ auto-generated files
+.godot/
+.import/
+
+# Export presets with secrets (if applicable)
+export_credentials.cfg
+
+# OS + IDE noise
+.DS_Store
+*.swp
+*.tmp
