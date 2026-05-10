@@ -335,6 +335,11 @@ func _on_final_boss_defeated() -> void:
 		return
 	_goal_reached = true
 	_transitioning = true
+	var is_new_best: bool = Game.register_clear("stage_3")
+	_stage_clear_label.text = "%s\n%s" % [
+		_stage_clear_label.text,
+		Game.format_score_summary(is_new_best)
+	]
 	_stage_clear_label.visible = true
 	# Penultimate boss down — advance to stage_4 (CORE) for the true
 	# final encounter against TYRANT-Z. The final game-clear flag is

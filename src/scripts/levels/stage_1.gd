@@ -329,6 +329,11 @@ func _on_goal_entered(body: Node2D) -> void:
 	if body is Player:
 		_goal_reached = true
 		_transitioning = true
+		var is_new_best: bool = Game.register_clear("stage_1")
+		_stage_clear_label.text = "%s\n%s" % [
+			_stage_clear_label.text,
+			Game.format_score_summary(is_new_best)
+		]
 		_stage_clear_label.visible = true
 		Sfx.play("goal")
 		# Hold the banner, then fade to black, then route to stage_2.

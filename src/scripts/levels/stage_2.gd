@@ -300,6 +300,11 @@ func _on_boss_defeated() -> void:
 		return
 	_goal_reached = true
 	_transitioning = true
+	var is_new_best: bool = Game.register_clear("stage_2")
+	_stage_clear_label.text = "%s\n%s" % [
+		_stage_clear_label.text,
+		Game.format_score_summary(is_new_best)
+	]
 	_stage_clear_label.visible = true
 	Sfx.play("goal")
 	# Boss is the mid-game climax; player still has stage_3 to escape through.

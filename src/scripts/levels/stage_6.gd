@@ -1,12 +1,9 @@
-## Voltline — Stage 4 (true final, V-016).
+## Voltline — Stage 6 (post-rush nightmare unlock).
 ##
-## After OMEGA-X, the player descends into the central core to face
-## TYRANT-Z. 1024 px wide, dark red lab theme, denser hazards: 3
-## walking enemies, 3 turrets across multiple platforms, 3 spike strips,
-## and the TYRANT-Z arena at the far right.
-##
-## TYRANT-Z's death is the true GAME CLEAR — sets Game.game_cleared
-## and persists it before the fade-to-title.
+## Unlocks after Boss Rush is cleared. 1024-px crimson-on-black arena
+## leading into the GRID-0 fight: walls of brutes, kamikaze patrols,
+## drone overwatch, and a checkpoint right before the boss room. Beating
+## GRID-0 swaps the title prompt to "ARCHITECT FELL" and persists.
 extends Node2D
 
 const VIEWPORT_W: int = 384
@@ -16,48 +13,43 @@ const STAGE_WIDTH: int = 1024
 const FLOOR_Y: int = 180
 const FLOOR_HEIGHT: int = 36
 
-const COLOR_BG: Color = Color("#1A0A14")
-const COLOR_GROUND: Color = Color("#3A1A20")
-const COLOR_PLATFORM: Color = Color("#6A2C32")
-const COLOR_WALL: Color = Color("#5A2028")
+const COLOR_BG: Color = Color("#0A0006")
+const COLOR_GROUND: Color = Color("#22080E")
+const COLOR_PLATFORM: Color = Color("#5A1024")
+const COLOR_WALL: Color = Color("#48081A")
 const COLOR_GOAL: Color = Color("#FFD24A")
-const COLOR_TEXT: Color = Color("#FF9890")
+const COLOR_TEXT: Color = Color("#FF6080")
 
 const PLAYER_SCENE: PackedScene = preload("res://scenes/player.tscn")
-const ENEMY_SCENE: PackedScene = preload("res://scenes/enemy.tscn")
-const DRONE_SCENE: PackedScene = preload("res://scenes/drone.tscn")
 const BRUTE_SCENE: PackedScene = preload("res://scenes/brute.tscn")
 const KAMIKAZE_SCENE: PackedScene = preload("res://scenes/kamikaze.tscn")
+const DRONE_SCENE: PackedScene = preload("res://scenes/drone.tscn")
 const TURRET_SCENE: PackedScene = preload("res://scenes/turret.tscn")
 const SPIKE_SCENE: PackedScene = preload("res://scenes/spike.tscn")
 const CHECKPOINT_SCENE: PackedScene = preload("res://scenes/checkpoint.tscn")
 const HEAL_STATION_SCENE: PackedScene = preload("res://scenes/heal_station.tscn")
-const HEAL_STATION_POS: Vector2 = Vector2(620.0, 168.0)
-const BRUTE_SPAWN: Vector2 = Vector2(720.0, 160.0)
-const BRUTE_MIN_X: float = 660.0
-const BRUTE_MAX_X: float = 800.0
-const KAMIKAZE_POS: Vector2 = Vector2(840.0, 80.0)
-const TYRANT_SCENE: PackedScene = preload("res://scenes/tyrant_z.tscn")
-const PLAYER_SPAWN: Vector2 = Vector2(40.0, 160.0)
-const CHECKPOINT_POS: Vector2 = Vector2(540.0, 180.0)
-const TYRANT_SPAWN: Vector2 = Vector2(940.0, 152.0)
+const GRID_ZERO_SCENE: PackedScene = preload("res://scenes/grid_zero.tscn")
 
-# Step-up step-down platforming. Small windows mean dash + wall-jump
-# usage is mandatory to clear cleanly.
+const PLAYER_SPAWN: Vector2 = Vector2(40.0, 160.0)
+const HEAL_STATION_POS: Vector2 = Vector2(560.0, 168.0)
+const CHECKPOINT_POS: Vector2 = Vector2(700.0, 180.0)
+const GRID_ZERO_SPAWN: Vector2 = Vector2(900.0, 142.0)
+
 const PLATFORMS: Array[Rect2] = [
+	# Opening climb.
 	Rect2(140.0, 152.0, 56.0, 8.0),
 	Rect2(260.0, 124.0, 56.0, 8.0),
 	Rect2(380.0, 100.0, 80.0, 8.0),
-	Rect2(540.0, 124.0, 56.0, 8.0),
-	# Wall-jump cap.
-	Rect2(640.0, 116.0, 96.0, 8.0),
-	Rect2(800.0, 140.0, 64.0, 8.0),
+	# Wall-jump shaft cap.
+	Rect2(540.0, 116.0, 96.0, 8.0),
+	# Bridge platforms toward the boss arena.
+	Rect2(700.0, 132.0, 56.0, 8.0),
+	Rect2(820.0, 144.0, 64.0, 8.0),
 ]
 
 const WALLS: Array[Rect2] = [
-	# Wall-jump shaft uprights.
-	Rect2(640.0, 124.0, 16.0, 56.0),
-	Rect2(720.0, 124.0, 16.0, 56.0),
+	Rect2(540.0, 124.0, 16.0, 56.0),
+	Rect2(620.0, 124.0, 16.0, 56.0),
 ]
 
 const BOUNDS: Array[Rect2] = [
@@ -65,43 +57,44 @@ const BOUNDS: Array[Rect2] = [
 	Rect2(float(STAGE_WIDTH), 0.0, 16.0, 216.0),
 ]
 
-const ENEMY_PATROLS: Array = [
-	[200.0, 140.0, 280.0],
-	[440.0, 380.0, 480.0],
-	[860.0, 800.0, 900.0],
+# Two brutes in the early gauntlet.
+const BRUTE_SPAWNS: Array = [
+	# [spawn_x, min_x, max_x]
+	[230.0, 180.0, 320.0],
+	[460.0, 420.0, 520.0],
 ]
-const ENEMY_FLOOR_Y: float = 168.0
-const ENEMY_HP: int = 6
-const ENEMY_SPEED: float = 80.0
 
-# Drones added v0.54 — patrol the gauntlet's vertical airspace.
-# Format: [spawn_x, hover_y, min_x, max_x]
+# Kamikaze patrols above the bridge.
+const KAMIKAZE_POSITIONS: Array[Vector2] = [
+	Vector2(360.0, 60.0),
+	Vector2(680.0, 70.0),
+]
+
+# Drones overwatching.
 const DRONE_PATROLS: Array = [
-	[400.0, 56.0, 340.0, 460.0],
-	[700.0, 64.0, 640.0, 760.0],
+	# [spawn_x, hover_y, min_x, max_x]
+	[480.0, 56.0, 420.0, 540.0],
+	[820.0, 64.0, 760.0, 880.0],
 ]
-const DRONE_HP: int = 4
-const DRONE_SPEED: float = 60.0
 
-# Three turrets: opening platform, mid-stage, atop wall-jump shaft.
 const TURRET_POSITIONS: Array[Vector2] = [
-	Vector2(290.0, 118.0),  # on platform y=124 top
-	Vector2(420.0, 94.0),   # on platform y=100 top
-	Vector2(680.0, 110.0),  # on wall-jump cap y=116 top
+	Vector2(290.0, 118.0),
+	Vector2(420.0, 94.0),
+	Vector2(640.0, 110.0),
 ]
 
 const SPIKE_POSITIONS: Array[Vector2] = [
 	Vector2(330.0, 176.0),
 	Vector2(500.0, 176.0),
-	Vector2(750.0, 176.0),
+	Vector2(770.0, 176.0),
 ]
 
-const STAGE_NAME: String = "SECTOR 4 // CORE"
-const STAGE_INTRO_DURATION: float = 2.0
-const GOAL_DELAY: float = 2.5
+const STAGE_NAME: String = "SECTOR ⊥ // THE ARCHITECT"
+const STAGE_INTRO_DURATION: float = 2.4
+const GOAL_DELAY: float = 3.0
 
 const FADE_IN_DURATION: float = 0.5
-const FADE_OUT_DURATION: float = 1.0
+const FADE_OUT_DURATION: float = 1.2
 
 var _goal_reached: bool = false
 var _transitioning: bool = false
@@ -111,12 +104,12 @@ var _stage_intro_label: Label
 var _fade_rect: ColorRect
 var _hp_bar: HpBar
 var _player: Player
-var _tyrant: TyrantZ
+var _grid_zero: GridZero
 
 
 func _ready() -> void:
-	Game.current_area = "stage_4"
-	Music.play("boss")  # reuse the dark boss track for the final fight
+	Game.current_area = "stage_6"
+	Music.play("boss")
 	_build_static_block(Rect2(0.0, FLOOR_Y, STAGE_WIDTH, FLOOR_HEIGHT), &"Floor")
 	for i in PLATFORMS.size():
 		_build_static_block(PLATFORMS[i], &"Platform_%d" % i)
@@ -125,15 +118,14 @@ func _ready() -> void:
 	for i in BOUNDS.size():
 		_build_static_block(BOUNDS[i], &"Bound_%d" % i)
 	_spawn_player_with_camera()
-	_spawn_enemies()
+	_spawn_brutes()
+	_spawn_kamikazes()
 	_spawn_drones()
-	_spawn_brute()
-	_spawn_kamikaze()
 	_spawn_turrets()
 	_spawn_spikes()
-	_spawn_checkpoint()
 	_spawn_heal_station()
-	_spawn_tyrant()
+	_spawn_checkpoint()
+	_spawn_grid_zero()
 	_build_hud()
 	_show_stage_intro()
 
@@ -159,11 +151,10 @@ func _draw() -> void:
 		draw_rect(platform, COLOR_PLATFORM)
 	for wall in WALLS:
 		draw_rect(wall, COLOR_WALL)
-	# TYRANT-Z callout above the spawn area.
 	var font: Font = ThemeDB.fallback_font
 	draw_string(
-		font, Vector2(TYRANT_SPAWN.x - 36.0, TYRANT_SPAWN.y - 56.0),
-		"TYRANT-Z", HORIZONTAL_ALIGNMENT_LEFT, -1, 12, COLOR_GOAL
+		font, Vector2(GRID_ZERO_SPAWN.x - 32.0, GRID_ZERO_SPAWN.y - 64.0),
+		"GRID-0", HORIZONTAL_ALIGNMENT_LEFT, -1, 12, COLOR_GOAL
 	)
 
 
@@ -186,25 +177,26 @@ func _build_static_block(rect: Rect2, body_name: StringName) -> void:
 	body.add_child(collider)
 
 
-func _spawn_enemies() -> void:
-	for entry in ENEMY_PATROLS:
+func _spawn_brutes() -> void:
+	for entry in BRUTE_SPAWNS:
 		var spawn_x: float = entry[0]
 		var min_x: float = entry[1]
 		var max_x: float = entry[2]
-		var enemy: Enemy = ENEMY_SCENE.instantiate() as Enemy
-		enemy.position = Vector2(spawn_x, ENEMY_FLOOR_Y)
-		enemy.patrol_min_x = min_x
-		enemy.patrol_max_x = max_x
-		enemy.max_hp = ENEMY_HP
-		enemy.walk_speed = ENEMY_SPEED
-		add_child(enemy)
+		var brute: Brute = BRUTE_SCENE.instantiate() as Brute
+		brute.position = Vector2(spawn_x, 160.0)
+		brute.patrol_min_x = min_x
+		brute.patrol_max_x = max_x
+		add_child(brute)
 
 
-func _spawn_turrets() -> void:
-	for pos in TURRET_POSITIONS:
-		var turret: Turret = TURRET_SCENE.instantiate() as Turret
-		turret.position = pos
-		add_child(turret)
+func _spawn_kamikazes() -> void:
+	for pos in KAMIKAZE_POSITIONS:
+		var kami: Kamikaze = KAMIKAZE_SCENE.instantiate() as Kamikaze
+		kami.position = pos
+		kami.hover_y = pos.y
+		kami.patrol_min_x = pos.x - 60.0
+		kami.patrol_max_x = pos.x + 60.0
+		add_child(kami)
 
 
 func _spawn_drones() -> void:
@@ -218,32 +210,16 @@ func _spawn_drones() -> void:
 		drone.hover_y = hover_y
 		drone.patrol_min_x = min_x
 		drone.patrol_max_x = max_x
-		drone.max_hp = DRONE_HP
-		drone.walk_speed = DRONE_SPEED
+		drone.max_hp = 4
+		drone.walk_speed = 70.0
 		add_child(drone)
 
 
-func _spawn_brute() -> void:
-	var brute: Brute = BRUTE_SCENE.instantiate() as Brute
-	brute.position = BRUTE_SPAWN
-	brute.patrol_min_x = BRUTE_MIN_X
-	brute.patrol_max_x = BRUTE_MAX_X
-	add_child(brute)
-
-
-func _spawn_kamikaze() -> void:
-	var kami: Kamikaze = KAMIKAZE_SCENE.instantiate() as Kamikaze
-	kami.position = KAMIKAZE_POS
-	kami.hover_y = KAMIKAZE_POS.y
-	kami.patrol_min_x = KAMIKAZE_POS.x - 60.0
-	kami.patrol_max_x = KAMIKAZE_POS.x + 60.0
-	add_child(kami)
-
-
-func _spawn_heal_station() -> void:
-	var station: HealStation = HEAL_STATION_SCENE.instantiate() as HealStation
-	station.position = HEAL_STATION_POS
-	add_child(station)
+func _spawn_turrets() -> void:
+	for pos in TURRET_POSITIONS:
+		var turret: Turret = TURRET_SCENE.instantiate() as Turret
+		turret.position = pos
+		add_child(turret)
 
 
 func _spawn_spikes() -> void:
@@ -251,6 +227,12 @@ func _spawn_spikes() -> void:
 		var spike: Spike = SPIKE_SCENE.instantiate() as Spike
 		spike.position = pos
 		add_child(spike)
+
+
+func _spawn_heal_station() -> void:
+	var station: HealStation = HEAL_STATION_SCENE.instantiate() as HealStation
+	station.position = HEAL_STATION_POS
+	add_child(station)
 
 
 func _spawn_checkpoint() -> void:
@@ -276,11 +258,11 @@ func _spawn_player_with_camera() -> void:
 	camera.make_current()
 
 
-func _spawn_tyrant() -> void:
-	_tyrant = TYRANT_SCENE.instantiate() as TyrantZ
-	_tyrant.position = TYRANT_SPAWN
-	add_child(_tyrant)
-	_tyrant.died.connect(_on_tyrant_defeated)
+func _spawn_grid_zero() -> void:
+	_grid_zero = GRID_ZERO_SCENE.instantiate() as GridZero
+	_grid_zero.position = GRID_ZERO_SPAWN
+	add_child(_grid_zero)
+	_grid_zero.died.connect(_on_grid_zero_defeated)
 
 
 func _build_hud() -> void:
@@ -289,11 +271,11 @@ func _build_hud() -> void:
 	add_child(_hud_layer)
 
 	_stage_clear_label = Label.new()
-	_stage_clear_label.text = "GAME CLEAR!"
-	_stage_clear_label.add_theme_font_size_override("font_size", 32)
+	_stage_clear_label.text = "ARCHITECT FELL"
+	_stage_clear_label.add_theme_font_size_override("font_size", 24)
 	_stage_clear_label.add_theme_color_override("font_color", COLOR_GOAL)
-	_stage_clear_label.position = Vector2(0.0, float(VIEWPORT_H - 48) * 0.5)
-	_stage_clear_label.size = Vector2(VIEWPORT_W, 48)
+	_stage_clear_label.position = Vector2(0.0, float(VIEWPORT_H - 56) * 0.5)
+	_stage_clear_label.size = Vector2(VIEWPORT_W, 56)
 	_stage_clear_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_stage_clear_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	_stage_clear_label.visible = false
@@ -301,7 +283,7 @@ func _build_hud() -> void:
 
 	_stage_intro_label = Label.new()
 	_stage_intro_label.text = STAGE_NAME
-	_stage_intro_label.add_theme_font_size_override("font_size", 16)
+	_stage_intro_label.add_theme_font_size_override("font_size", 14)
 	_stage_intro_label.add_theme_color_override("font_color", COLOR_TEXT)
 	_stage_intro_label.position = Vector2(0.0, 30.0)
 	_stage_intro_label.size = Vector2(VIEWPORT_W, 24)
@@ -341,15 +323,13 @@ func _hide_stage_intro() -> void:
 	_stage_intro_label.visible = false
 
 
-func _on_tyrant_defeated() -> void:
+func _on_grid_zero_defeated() -> void:
 	if _goal_reached:
 		return
 	_goal_reached = true
 	_transitioning = true
-	# Game-clear flag set BEFORE register_clear so the score persistence
-	# also stamps the milestone in the same save_to_file() round-trip.
-	Game.game_cleared = true
-	var is_new_best: bool = Game.register_clear("stage_4")
+	Game.architect_cleared = true
+	var is_new_best: bool = Game.register_clear("stage_6")
 	_stage_clear_label.text = "%s\n%s" % [
 		_stage_clear_label.text,
 		Game.format_score_summary(is_new_best)

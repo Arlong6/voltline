@@ -26,7 +26,8 @@ const SUBTITLE_TEXT: String = "DIAN GUANG"
 const PROMPT_TEXT: String = "PRESS X TO START"
 const CLEAR_TEXT: String = "GAME CLEAR  -  4: STAGE INFINITY"
 const TRUE_CLEAR_TEXT: String = "TRUE CLEAR  -  5: BOSS RUSH"
-const RUSH_CLEAR_TEXT: String = "RUSH CLEAR  -  PRESS X"
+const RUSH_CLEAR_TEXT: String = "RUSH CLEAR  -  6: THE ARCHITECT"
+const ARCHITECT_TEXT: String = "ARCHITECT FELL  -  PRESS X"
 
 const STORY_LINES: Array[String] = [
 	"21XX. THE OUTER GRID HAS FALLEN.",
@@ -107,6 +108,15 @@ func _unhandled_input(event: InputEvent) -> void:
 					Game.reset_run()
 					_fade_out_then_goto("boss_rush")
 				return
+			KEY_6:
+				# Stage 6 (// THE ARCHITECT) unlocks after Boss Rush
+				# is cleared. Silent no-op if not yet unlocked.
+				if Game.boss_rush_cleared:
+					get_viewport().set_input_as_handled()
+					_transitioning = true
+					Game.reset_run()
+					_fade_out_then_goto("stage_6")
+				return
 	if event.is_action_pressed("jump") or event.is_action_pressed("shoot"):
 		get_viewport().set_input_as_handled()
 		_transitioning = true
@@ -181,7 +191,9 @@ func _draw() -> void:
 
 	var blink: bool = sin(_t * 4.0) > 0.0
 	if blink:
-		if Game.boss_rush_cleared:
+		if Game.architect_cleared:
+			_draw_centered(font, ARCHITECT_TEXT, 200.0, PROMPT_FONT_SIZE, COLOR_CLEAR)
+		elif Game.boss_rush_cleared:
 			_draw_centered(font, RUSH_CLEAR_TEXT, 200.0, PROMPT_FONT_SIZE, COLOR_CLEAR)
 		elif Game.true_cleared:
 			_draw_centered(font, TRUE_CLEAR_TEXT, 200.0, PROMPT_FONT_SIZE, COLOR_CLEAR)

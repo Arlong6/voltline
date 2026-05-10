@@ -88,7 +88,9 @@ extends CharacterBody2D
 @export var max_hp: int = 12
 
 ## Damage taken from direct enemy contact (vs the smaller projectile damage).
-@export var contact_damage: int = 4
+## v0.58: dropped from 4 → 2 — 6 hits to death instead of 3 lets the
+## player play more aggressively against the heavier enemy density.
+@export var contact_damage: int = 2
 
 ## Pushes the player away from danger when hit. x is mirrored by facing
 ## (positive = away from facing); y is launch upward.
@@ -518,6 +520,7 @@ func take_damage(amount: int) -> void:
 		return
 	hp = maxi(hp - amount, 0)
 	_invincible_timer = invincibility_duration
+	Game.register_hit()
 	if hp <= 0:
 		respawn()
 	elif not Game.test_mode:

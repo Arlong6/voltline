@@ -13,8 +13,9 @@ extends Area2D
 ## Maximum pixels of travel before the bullet despawns.
 const MAX_TRAVEL: float = 400.0
 
-## Damage applied to player on contact.
-@export var damage: int = 3
+## Damage applied to player on contact. v0.58: 3 → 2 to match the
+## softened contact_damage curve.
+@export var damage: int = 2
 
 # ---------------------------------------------------------------------------
 # Visuals

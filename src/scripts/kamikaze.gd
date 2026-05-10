@@ -92,6 +92,7 @@ func die() -> void:
 		return
 	is_alive = false
 	hp = 0
+	Game.register_kill()
 	if not Game.test_mode:
 		_spawn_blast()
 		Sfx.play("explode")
@@ -123,7 +124,7 @@ func _spawn_blast() -> void:
 	var player: Node2D = get_tree().get_first_node_in_group("player")
 	if player != null and (player.global_position - global_position).length() <= 24.0:
 		if player.has_method("take_damage"):
-			player.take_damage(3)
+			player.take_damage(2)
 
 
 func _draw() -> void:

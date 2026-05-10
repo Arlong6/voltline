@@ -1,0 +1,6 @@
+[gd_scene load_steps=2 format=3 uid="uid://b1voltlinestage6"]
+
+[ext_resource type="Script" path="res://scripts/levels/stage_6.gd" id="1_stage6"]
+
+[node name="Stage6" type="Node2D"]
+script = ExtResource("1_stage6")

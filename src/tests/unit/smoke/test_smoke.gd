@@ -34,3 +34,5 @@ func test_game_level_paths_known_keys() -> void:
 		"LEVEL_PATHS must define 'boss_rush'")
 	assert_true(Game.LEVEL_PATHS.has("cutscene"),
 		"LEVEL_PATHS must define 'cutscene'")
+	assert_true(Game.LEVEL_PATHS.has("stage_6"),
+		"LEVEL_PATHS must define 'stage_6'")

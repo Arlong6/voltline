@@ -128,6 +128,7 @@ func die() -> void:
 		return
 	is_alive = false
 	hp = 0
+	Game.register_kill()
 	died.emit()
 	if not Game.test_mode:
 		Sfx.play("enemy_die")

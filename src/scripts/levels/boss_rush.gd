@@ -173,9 +173,13 @@ func _on_rush_cleared() -> void:
 		return
 	_goal_reached = true
 	_transitioning = true
-	_stage_clear_label.visible = true
 	Game.boss_rush_cleared = true
-	Game.save_to_file()
+	var is_new_best: bool = Game.register_clear("boss_rush")
+	_stage_clear_label.text = "%s\n%s" % [
+		_stage_clear_label.text,
+		Game.format_score_summary(is_new_best)
+	]
+	_stage_clear_label.visible = true
 	Sfx.play("goal")
 	var timer: SceneTreeTimer = get_tree().create_timer(GOAL_DELAY)
 	timer.timeout.connect(_fade_out_to_title)

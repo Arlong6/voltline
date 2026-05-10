@@ -24,6 +24,23 @@ var test_mode: bool = false
 ## Seconds the player has spent in a stage since the last reset_run().
 var session_time: float = 0.0
 
+## Number of times the player has been hit during the current run.
+## Incremented from Player.take_damage; reset by reset_run().
+var session_hits: int = 0
+
+## Number of enemies the player has killed during the current run.
+## Stages / enemies bump this via Game.register_kill().
+var session_kills: int = 0
+
+## Number of coins picked up during the current run (separate from the
+## persistent total). Incremented in add_coin; reset by reset_run().
+var session_coins: int = 0
+
+## Best score per stage key (e.g. "stage_1" → 4500). Persisted to disk so
+## the title-screen leaderboard / stage-clear "NEW BEST" banner survive
+## restarts.
+var best_scores: Dictionary[String, int] = {}
+
 ## True after the player clears the final stage — title screen reads this
 ## to swap the prompt for a "GAME CLEAR" celebration line.
 var game_cleared: bool = false
@@ -36,6 +53,10 @@ var true_cleared: bool = false
 ## True after the player clears Boss Rush mode (post-true-clear unlock).
 ## Adds a third tier of celebration text on the title screen.
 var boss_rush_cleared: bool = false
+
+## True after the player defeats GRID-0 in Stage 6 (the post-rush
+## nightmare unlock). Final flag in the progression chain.
+var architect_cleared: bool = false
 
 # ---------------------------------------------------------------------------
 # Cutscene staging — the cutscene scene reads these on _ready.
@@ -71,10 +92,87 @@ const UPGRADE_DASH_DELTA: float = 30.0
 const UPGRADE_SHOOT_DELTA: float = 0.03
 
 
-## Adds `amount` to the persistent coin total and writes the save file.
+## Adds `amount` to the persistent coin total + the per-run session total
+## (used by the score formula) and writes the save file.
 func add_coin(amount: int) -> void:
 	coins += amount
+	session_coins += amount
 	save_to_file()
+
+
+## Bumped by Player.take_damage on every hit landed against the player.
+## Used by the per-stage score formula.
+func register_hit() -> void:
+	session_hits += 1
+
+
+## Bumped by Enemy.die when the player's bullet (or other player-driven
+## damage) brought the kill. Used by the score formula.
+func register_kill() -> void:
+	session_kills += 1
+
+
+## Computes the score for the current run state and rank tier. Pure
+## function so tests can drive it with synthesized values. Higher = better.
+##
+## Formula (max ≈ 5000):
+##   base       = 1000  (just for clearing)
+##   time_bonus = max(0, 2000 - session_time × 10)   — sub-200s = full bonus
+##   hit_bonus  = max(0, 1500 - session_hits × 200)  — no-hit = 1500
+##   kill_bonus = session_kills × 25                  — uncapped, ~10 kills = +250
+##   coin_bonus = session_coins × 8                   — uncapped, ~30 coins = +240
+##   TOTAL      = sum of the above
+func compute_score() -> int:
+	var base: int = 1000
+	var time_bonus: int = clampi(2000 - int(session_time * 10.0), 0, 2000)
+	var hit_bonus: int = clampi(1500 - session_hits * 200, 0, 1500)
+	var kill_bonus: int = session_kills * 25
+	var coin_bonus: int = session_coins * 8
+	return base + time_bonus + hit_bonus + kill_bonus + coin_bonus
+
+
+## Threshold table for the rank tiers — cut points are exclusive lower
+## bounds (score >= threshold means at least this rank).
+const RANK_TIERS: Array = [
+	[5000, "SSS"],
+	[4500, "SS"],
+	[4000, "S"],
+	[3500, "A"],
+	[3000, "B"],
+	[2500, "C"],
+	[0,    "D"],
+]
+
+
+## Returns the rank string for a given score.
+func rank_for_score(score: int) -> String:
+	for tier in RANK_TIERS:
+		if score >= int(tier[0]):
+			return String(tier[1])
+	return "D"
+
+
+## Records the current run's score against `stage_key`. Persists the
+## new best (and the all-flags state) to disk. Returns true if the
+## score was a new best, so the stage clear screen can show "NEW BEST".
+func register_clear(stage_key: String) -> bool:
+	var score: int = compute_score()
+	var prev: int = int(best_scores.get(stage_key, 0))
+	var is_new_best: bool = score > prev
+	if is_new_best:
+		best_scores[stage_key] = score
+	save_to_file()
+	return is_new_best
+
+
+## Formats the live score + rank for the stage clear banner. Caller
+## passes the boolean returned by register_clear so the "NEW BEST" tag
+## can be tacked on.
+func format_score_summary(is_new_best: bool) -> String:
+	var score: int = compute_score()
+	var rank: String = rank_for_score(score)
+	var tag: String = "  NEW BEST" if is_new_best else ""
+	return "SCORE %d  RANK %s%s" % [score, rank, tag]
 
 
 ## Applies all purchased upgrades to a freshly-instantiated Player BEFORE
@@ -101,6 +199,13 @@ func save_to_file() -> void:
 	cfg.set_value("game", "game_cleared", game_cleared)
 	cfg.set_value("game", "true_cleared", true_cleared)
 	cfg.set_value("game", "boss_rush_cleared", boss_rush_cleared)
+	cfg.set_value("game", "architect_cleared", architect_cleared)
+	# Best scores — flatten the typed dictionary into a plain dict for
+	# ConfigFile (Variant-friendly).
+	var scores: Dictionary = {}
+	for key in best_scores.keys():
+		scores[key] = best_scores[key]
+	cfg.set_value("game", "best_scores", scores)
 	cfg.save(SAVE_PATH)
 
 
@@ -120,6 +225,11 @@ func load_from_file() -> void:
 	game_cleared = cfg.get_value("game", "game_cleared", false)
 	true_cleared = cfg.get_value("game", "true_cleared", false)
 	boss_rush_cleared = cfg.get_value("game", "boss_rush_cleared", false)
+	architect_cleared = cfg.get_value("game", "architect_cleared", false)
+	var loaded_scores: Dictionary = cfg.get_value("game", "best_scores", {})
+	best_scores.clear()
+	for key in loaded_scores.keys():
+		best_scores[String(key)] = int(loaded_scores[key])
 
 # ---------------------------------------------------------------------------
 # Scene routing
@@ -133,6 +243,7 @@ const LEVEL_PATHS: Dictionary[String, String] = {
 	"stage_4": "res://scenes/levels/stage_4.tscn",
 	"stage_5": "res://scenes/levels/stage_5.tscn",
 	"boss_rush": "res://scenes/levels/boss_rush.tscn",
+	"stage_6":   "res://scenes/levels/stage_6.tscn",
 	"cutscene":  "res://scenes/cutscene.tscn",
 }
 
@@ -163,7 +274,9 @@ func goto_level(key: String) -> void:
 
 ## Wipes per-run state. Called by stage scripts on respawn / by the title
 ## screen on restart. NOTE: coins, upgrades, and game_cleared persist
-## across runs (they're saved to disk) — only the per-session timer
-## resets here.
+## across runs (they're saved to disk) — only per-session counters reset.
 func reset_run() -> void:
 	session_time = 0.0
+	session_hits = 0
+	session_kills = 0
+	session_coins = 0
