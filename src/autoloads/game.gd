@@ -41,6 +41,13 @@ var session_coins: int = 0
 ## restarts.
 var best_scores: Dictionary[String, int] = {}
 
+## Best clear time per stage key (seconds). Lower = better. Persisted.
+var best_times: Dictionary[String, float] = {}
+
+## Total number of stage runs initiated since save creation. Bumped by
+## reset_run() so dying + retrying counts as one run.
+var total_runs: int = 0
+
 # ---------------------------------------------------------------------------
 # Settings — persisted, mutated by the pause-menu sliders.
 # ---------------------------------------------------------------------------
@@ -165,12 +172,18 @@ func rank_for_score(score: int) -> String:
 ## Records the current run's score against `stage_key`. Persists the
 ## new best (and the all-flags state) to disk. Returns true if the
 ## score was a new best, so the stage clear screen can show "NEW BEST".
+##
+## Also updates best_times when the current session_time beats the
+## previous record (independent of score).
 func register_clear(stage_key: String) -> bool:
 	var score: int = compute_score()
 	var prev: int = int(best_scores.get(stage_key, 0))
 	var is_new_best: bool = score > prev
 	if is_new_best:
 		best_scores[stage_key] = score
+	var prev_time: float = float(best_times.get(stage_key, INF))
+	if session_time < prev_time:
+		best_times[stage_key] = session_time
 	save_to_file()
 	return is_new_best
 
@@ -183,6 +196,39 @@ func format_score_summary(is_new_best: bool) -> String:
 	var rank: String = rank_for_score(score)
 	var tag: String = "  NEW BEST" if is_new_best else ""
 	return "SCORE %d  RANK %s%s" % [score, rank, tag]
+
+
+## Formats a time in seconds as M:SS.s (e.g., 1:23.4). Used by the
+## stage-select panel and the stats summary.
+func format_time(seconds: float) -> String:
+	if seconds <= 0.0 or seconds == INF:
+		return "--:--"
+	var mins: int = int(seconds) / 60
+	var secs: float = seconds - float(mins * 60)
+	return "%d:%05.2f" % [mins, secs]
+
+
+## True when `stage_key`'s prerequisite has been cleared. Used by the
+## stage-select panel + KEY hot-keys to gate access. Stage 1 is always
+## free; subsequent stages each require the previous stage's clear or
+## an equivalent flag.
+func is_stage_unlocked(stage_key: String) -> bool:
+	match stage_key:
+		"stage_1":
+			return true
+		"stage_2":
+			return best_scores.has("stage_1")
+		"stage_3":
+			return best_scores.has("stage_2")
+		"stage_4":
+			return best_scores.has("stage_3")
+		"stage_5":
+			return game_cleared
+		"boss_rush":
+			return true_cleared
+		"stage_6":
+			return boss_rush_cleared
+	return false
 
 
 ## Applies all purchased upgrades to a freshly-instantiated Player BEFORE
@@ -216,6 +262,11 @@ func save_to_file() -> void:
 	for key in best_scores.keys():
 		scores[key] = best_scores[key]
 	cfg.set_value("game", "best_scores", scores)
+	var times: Dictionary = {}
+	for key in best_times.keys():
+		times[key] = best_times[key]
+	cfg.set_value("game", "best_times", times)
+	cfg.set_value("game", "total_runs", total_runs)
 	cfg.set_value("settings", "master_volume", setting_master_volume)
 	cfg.set_value("settings", "sfx_volume", setting_sfx_volume)
 	cfg.set_value("settings", "music_volume", setting_music_volume)
@@ -243,6 +294,11 @@ func load_from_file() -> void:
 	best_scores.clear()
 	for key in loaded_scores.keys():
 		best_scores[String(key)] = int(loaded_scores[key])
+	var loaded_times: Dictionary = cfg.get_value("game", "best_times", {})
+	best_times.clear()
+	for key in loaded_times.keys():
+		best_times[String(key)] = float(loaded_times[key])
+	total_runs = int(cfg.get_value("game", "total_runs", 0))
 	setting_master_volume = float(cfg.get_value("settings", "master_volume", 0.7))
 	setting_sfx_volume    = float(cfg.get_value("settings", "sfx_volume", 1.0))
 	setting_music_volume  = float(cfg.get_value("settings", "music_volume", 0.7))
@@ -310,3 +366,4 @@ func reset_run() -> void:
 	session_hits = 0
 	session_kills = 0
 	session_coins = 0
+	total_runs += 1

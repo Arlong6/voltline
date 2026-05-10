@@ -23,6 +23,8 @@ func before_each() -> void:
 	Game.session_coins = 0
 	Game.session_time = 0.0
 	Game.best_scores.clear()
+	Game.best_times.clear()
+	Game.total_runs = 0
 
 
 func after_each() -> void:

@@ -12,6 +12,11 @@ func before_each() -> void:
 	Game.session_kills = 0
 	Game.session_coins = 0
 	Game.best_scores.clear()
+	Game.best_times.clear()
+	Game.total_runs = 0
+	Game.game_cleared = false
+	Game.true_cleared = false
+	Game.boss_rush_cleared = false
 
 
 func after_each() -> void:
