@@ -75,11 +75,11 @@ func _process(delta: float) -> void:
 
 
 # Despawns the bullet on contact with any body. Damage scales with
-# charge level: Lv0 = 1, Lv1 = 2, Lv2 = 4. Walls (StaticBody2D) also
-# despawn the bullet via this same path but apply no damage.
+# charge level: Lv0 = 1, Lv1 = 2, Lv2 = 4.
 #
-# Lv2 (super) bullets are NOT consumed by enemy contact — they pierce
-# through and continue to despawn only on wall contact or distance.
+# Lv2 (super) bullets pierce through enemies AND through any
+# destructible wall they break (so a single super shot can blow open a
+# hidden room and clip the enemy waiting inside).
 func _on_body_entered(body: Node2D) -> void:
 	if Game.test_mode:
 		return
@@ -87,6 +87,11 @@ func _on_body_entered(body: Node2D) -> void:
 		body.take_damage(damage_for_level())
 		if charge_level >= 2:
 			return  # piercing — keep flying
+	elif body is DestructibleWall and not body.is_destroyed:
+		body.take_damage(damage_for_level())
+		# Pierce on Lv2 — only if our shot was the one that broke it.
+		if charge_level >= 2 and body.is_destroyed:
+			return
 	queue_free()
 
 

@@ -33,6 +33,8 @@ const SPIKE_SCENE: PackedScene = preload("res://scenes/spike.tscn")
 const CHECKPOINT_SCENE: PackedScene = preload("res://scenes/checkpoint.tscn")
 const HEAL_STATION_SCENE: PackedScene = preload("res://scenes/heal_station.tscn")
 const HEAL_STATION_POS: Vector2 = Vector2(620.0, 168.0)
+const DESTRUCTIBLE_WALL_SCENE: PackedScene = preload("res://scenes/destructible_wall.tscn")
+const COIN_SCENE: PackedScene = preload("res://scenes/coin.tscn")
 const BRUTE_SPAWN: Vector2 = Vector2(720.0, 160.0)
 const BRUTE_MIN_X: float = 660.0
 const BRUTE_MAX_X: float = 800.0
@@ -133,6 +135,7 @@ func _ready() -> void:
 	_spawn_spikes()
 	_spawn_checkpoint()
 	_spawn_heal_station()
+	_spawn_hidden_room(220.0, 10)
 	_spawn_tyrant()
 	_build_hud()
 	_show_stage_intro()
@@ -244,6 +247,20 @@ func _spawn_heal_station() -> void:
 	var station: HealStation = HEAL_STATION_SCENE.instantiate() as HealStation
 	station.position = HEAL_STATION_POS
 	add_child(station)
+
+
+# v0.60 hidden room — see stage_2 for layout shape.
+func _spawn_hidden_room(wall_x: float, coin_count: int) -> void:
+	var room_w: float = 16.0 + float(coin_count) * 8.0
+	_build_static_block(Rect2(wall_x, 148.0, room_w, 4.0), &"HiddenCeiling")
+	var wall: DestructibleWall = DESTRUCTIBLE_WALL_SCENE.instantiate() as DestructibleWall
+	wall.size = Vector2(8.0, 32.0)
+	wall.position = Vector2(wall_x + 4.0, 164.0)
+	add_child(wall)
+	for i in coin_count:
+		var coin: Coin = COIN_SCENE.instantiate() as Coin
+		coin.position = Vector2(wall_x + 16.0 + float(i) * 8.0, 168.0)
+		add_child(coin)
 
 
 func _spawn_spikes() -> void:

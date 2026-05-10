@@ -1,0 +1,14 @@
+[gd_scene load_steps=3 format=3 uid="uid://b1voltlinedestructiblewall"]
+
+[ext_resource type="Script" path="res://scripts/destructible_wall.gd" id="1_destrwall"]
+
+[sub_resource type="RectangleShape2D" id="RectShape_destrwall"]
+size = Vector2(24, 24)
+
+[node name="DestructibleWall" type="StaticBody2D"]
+collision_layer = 1
+collision_mask = 0
+script = ExtResource("1_destrwall")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+shape = SubResource("RectShape_destrwall")

@@ -30,6 +30,8 @@ const SPIKE_SCENE: PackedScene = preload("res://scenes/spike.tscn")
 const CHECKPOINT_SCENE: PackedScene = preload("res://scenes/checkpoint.tscn")
 const HEAL_STATION_SCENE: PackedScene = preload("res://scenes/heal_station.tscn")
 const HEAL_STATION_POS: Vector2 = Vector2(440.0, 168.0)
+const DESTRUCTIBLE_WALL_SCENE: PackedScene = preload("res://scenes/destructible_wall.tscn")
+const COIN_SCENE: PackedScene = preload("res://scenes/coin.tscn")
 const CHECKPOINT_POS: Vector2 = Vector2(420.0, 180.0)
 
 # Spike strip positions (centre x, centre y). Player walking over these
@@ -117,6 +119,7 @@ func _ready() -> void:
 	_spawn_spikes()
 	_spawn_checkpoint()
 	_spawn_heal_station()
+	_spawn_hidden_room(380.0, 6)
 	_spawn_boss()
 	_build_hud()
 	_show_stage_intro()
@@ -132,6 +135,26 @@ func _spawn_heal_station() -> void:
 	var station: HealStation = HEAL_STATION_SCENE.instantiate() as HealStation
 	station.position = HEAL_STATION_POS
 	add_child(station)
+
+
+# v0.60 hidden room — a low ceiling at y=148 caps the alcove so the
+# player can't double-jump over the destructible 32-tall wall, forcing
+# them to use a Lv2 super charge to break in.
+func _spawn_hidden_room(wall_x: float, coin_count: int) -> void:
+	var room_w: float = 16.0 + float(coin_count) * 8.0
+	# Ceiling block.
+	_build_static_block(Rect2(wall_x, 148.0, room_w, 4.0), &"HiddenCeiling")
+	# Destructible wall — 8 wide × 32 tall, sits on the floor at y=180
+	# (centred at y=164).
+	var wall: DestructibleWall = DESTRUCTIBLE_WALL_SCENE.instantiate() as DestructibleWall
+	wall.size = Vector2(8.0, 32.0)
+	wall.position = Vector2(wall_x + 4.0, 164.0)
+	add_child(wall)
+	# Coins inside the alcove.
+	for i in coin_count:
+		var coin: Coin = COIN_SCENE.instantiate() as Coin
+		coin.position = Vector2(wall_x + 16.0 + float(i) * 8.0, 168.0)
+		add_child(coin)
 
 
 func _unhandled_input(event: InputEvent) -> void:

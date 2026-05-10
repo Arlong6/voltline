@@ -31,6 +31,8 @@ const HEAL_STATION_SCENE: PackedScene = preload("res://scenes/heal_station.tscn"
 const MOVING_PLATFORM_SCENE: PackedScene = preload("res://scenes/moving_platform.tscn")
 const LASER_BEAM_SCENE: PackedScene = preload("res://scenes/laser_beam.tscn")
 const CRUSHER_SCENE: PackedScene = preload("res://scenes/crusher.tscn")
+const DESTRUCTIBLE_WALL_SCENE: PackedScene = preload("res://scenes/destructible_wall.tscn")
+const COIN_SCENE: PackedScene = preload("res://scenes/coin.tscn")
 const GRID_ZERO_SCENE: PackedScene = preload("res://scenes/grid_zero.tscn")
 
 const PLAYER_SPAWN: Vector2 = Vector2(40.0, 160.0)
@@ -128,6 +130,7 @@ func _ready() -> void:
 	_spawn_spikes()
 	_spawn_hazards()
 	_spawn_heal_station()
+	_spawn_hidden_room(80.0, 15)
 	_spawn_checkpoint()
 	_spawn_grid_zero()
 	_build_hud()
@@ -237,6 +240,22 @@ func _spawn_heal_station() -> void:
 	var station: HealStation = HEAL_STATION_SCENE.instantiate() as HealStation
 	station.position = HEAL_STATION_POS
 	add_child(station)
+
+
+# v0.60 hidden room — see stage_2 for the layout shape. Stage 6 hides
+# the biggest stash (15 coins) right after the spawn so well-prepared
+# players who carry over coins from prior runs get a head-start payoff.
+func _spawn_hidden_room(wall_x: float, coin_count: int) -> void:
+	var room_w: float = 16.0 + float(coin_count) * 8.0
+	_build_static_block(Rect2(wall_x, 148.0, room_w, 4.0), &"HiddenCeiling")
+	var wall: DestructibleWall = DESTRUCTIBLE_WALL_SCENE.instantiate() as DestructibleWall
+	wall.size = Vector2(8.0, 32.0)
+	wall.position = Vector2(wall_x + 4.0, 164.0)
+	add_child(wall)
+	for i in coin_count:
+		var coin: Coin = COIN_SCENE.instantiate() as Coin
+		coin.position = Vector2(wall_x + 16.0 + float(i) * 8.0, 168.0)
+		add_child(coin)
 
 
 # v0.59 hazards — one of each new type so the player meets them all
