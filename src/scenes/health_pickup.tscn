@@ -1,0 +1,14 @@
+[gd_scene load_steps=3 format=3 uid="uid://b1voltlinehealth"]
+
+[ext_resource type="Script" path="res://scripts/health_pickup.gd" id="1_health"]
+
+[sub_resource type="RectangleShape2D" id="RectShape_health"]
+size = Vector2(8, 8)
+
+[node name="HealthPickup" type="Area2D"]
+collision_layer = 32
+collision_mask = 2
+script = ExtResource("1_health")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+shape = SubResource("RectShape_health")

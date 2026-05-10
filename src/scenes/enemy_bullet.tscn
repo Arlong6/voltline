@@ -1,0 +1,14 @@
+[gd_scene load_steps=3 format=3 uid="uid://b1voltlineenemybullet"]
+
+[ext_resource type="Script" path="res://scripts/enemy_bullet.gd" id="1_enemybullet"]
+
+[sub_resource type="RectangleShape2D" id="RectShape_enemybullet"]
+size = Vector2(6, 6)
+
+[node name="EnemyBullet" type="Area2D"]
+collision_layer = 16
+collision_mask = 3
+script = ExtResource("1_enemybullet")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+shape = SubResource("RectShape_enemybullet")

@@ -22,3 +22,15 @@ func test_game_level_paths_known_keys() -> void:
 		"LEVEL_PATHS must define 'title'")
 	assert_true(Game.LEVEL_PATHS.has("stage_1"),
 		"LEVEL_PATHS must define 'stage_1'")
+	assert_true(Game.LEVEL_PATHS.has("stage_2"),
+		"LEVEL_PATHS must define 'stage_2'")
+	assert_true(Game.LEVEL_PATHS.has("stage_3"),
+		"LEVEL_PATHS must define 'stage_3'")
+	assert_true(Game.LEVEL_PATHS.has("stage_4"),
+		"LEVEL_PATHS must define 'stage_4'")
+	assert_true(Game.LEVEL_PATHS.has("stage_5"),
+		"LEVEL_PATHS must define 'stage_5'")
+	assert_true(Game.LEVEL_PATHS.has("boss_rush"),
+		"LEVEL_PATHS must define 'boss_rush'")
+	assert_true(Game.LEVEL_PATHS.has("cutscene"),
+		"LEVEL_PATHS must define 'cutscene'")

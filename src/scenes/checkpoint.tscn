@@ -1,0 +1,15 @@
+[gd_scene load_steps=3 format=3 uid="uid://b1voltlinecheckpoint"]
+
+[ext_resource type="Script" path="res://scripts/checkpoint.gd" id="1_checkpoint"]
+
+[sub_resource type="RectangleShape2D" id="RectShape_checkpoint"]
+size = Vector2(16, 28)
+
+[node name="Checkpoint" type="Area2D"]
+collision_layer = 0
+collision_mask = 2
+script = ExtResource("1_checkpoint")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+position = Vector2(0, -14)
+shape = SubResource("RectShape_checkpoint")

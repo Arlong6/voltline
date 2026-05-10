@@ -1,0 +1,15 @@
+[gd_scene load_steps=3 format=3 uid="uid://b1voltlinespike"]
+
+[ext_resource type="Script" path="res://scripts/spike.gd" id="1_spike"]
+
+[sub_resource type="RectangleShape2D" id="RectShape_spike"]
+size = Vector2(16, 6)
+
+[node name="Spike" type="Area2D"]
+collision_layer = 0
+collision_mask = 2
+script = ExtResource("1_spike")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+position = Vector2(0, 1)
+shape = SubResource("RectShape_spike")

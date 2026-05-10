@@ -1,0 +1,6 @@
+[gd_scene load_steps=2 format=3 uid="uid://b1voltlinebossrush"]
+
+[ext_resource type="Script" path="res://scripts/levels/boss_rush.gd" id="1_bossrush"]
+
+[node name="BossRush" type="Node2D"]
+script = ExtResource("1_bossrush")

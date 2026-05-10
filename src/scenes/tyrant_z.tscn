@@ -1,0 +1,24 @@
+[gd_scene load_steps=4 format=3 uid="uid://b1voltlinetyrantz"]
+
+[ext_resource type="Script" path="res://scripts/tyrant_z.gd" id="1_tyrantz"]
+
+[sub_resource type="RectangleShape2D" id="RectShape_tyrantz_body"]
+size = Vector2(48, 48)
+
+[sub_resource type="RectangleShape2D" id="RectShape_tyrantz_hurt"]
+size = Vector2(48, 48)
+
+[node name="TyrantZ" type="CharacterBody2D"]
+collision_layer = 4
+collision_mask = 1
+script = ExtResource("1_tyrantz")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+shape = SubResource("RectShape_tyrantz_body")
+
+[node name="HurtBox" type="Area2D" parent="."]
+collision_layer = 0
+collision_mask = 2
+
+[node name="HurtCollider" type="CollisionShape2D" parent="HurtBox"]
+shape = SubResource("RectShape_tyrantz_hurt")

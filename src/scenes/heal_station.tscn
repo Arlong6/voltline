@@ -1,0 +1,15 @@
+[gd_scene load_steps=3 format=3 uid="uid://b1voltlinehealstation"]
+
+[ext_resource type="Script" path="res://scripts/heal_station.gd" id="1_healstation"]
+
+[sub_resource type="RectangleShape2D" id="RectShape_healstation_area"]
+size = Vector2(20, 16)
+
+[node name="HealStation" type="Area2D"]
+collision_layer = 0
+collision_mask = 2
+script = ExtResource("1_healstation")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+shape = SubResource("RectShape_healstation_area")
+position = Vector2(0, -2)
