@@ -14,6 +14,10 @@ extends Node
 const _SAMPLE_RATE: int = 22050
 const _VOLUME_DB: float = -14.0
 
+## Linear 0..1 multiplier applied on top of the base track volume.
+## Pause-menu settings tweak this live.
+var volume_scale: float = 1.0
+
 # ---------------------------------------------------------------------------
 # Note frequency table (Hz). A4 = 440. We mostly stick to A natural minor.
 # ---------------------------------------------------------------------------
@@ -73,11 +77,27 @@ func play(track_name: String) -> void:
 	if stream == null:
 		push_warning("Music.play: unknown track '%s'" % track_name)
 		return
+	_apply_volume()
 	if _player.stream == stream and _player.playing:
 		return
 	_player.stop()
 	_player.stream = stream
 	_player.play()
+
+
+## Re-applies the current volume_scale to the underlying player. Pause
+## menu calls this whenever the user drags the music slider.
+func apply_volume() -> void:
+	if _player == null:
+		return
+	_apply_volume()
+
+
+func _apply_volume() -> void:
+	if volume_scale <= 0.001:
+		_player.volume_db = -80.0
+	else:
+		_player.volume_db = _VOLUME_DB + linear_to_db(volume_scale)
 
 
 ## Stops the current track immediately.

@@ -41,6 +41,11 @@ func _ready() -> void:
 	_sounds["text_blip"]     = _synth_tone(800.0, 800.0, 0.025, 0.10)
 
 
+## Linear 0..1 multiplier applied as volume_db on every play. Pause-menu
+## settings tweak this live so the SFX bus is independent of music.
+var volume_scale: float = 1.0
+
+
 ## Plays a named sound. Silent in test mode. Unknown names are logged and
 ## ignored — they should be caught by reviewers, not crash gameplay.
 func play(sound_name: String) -> void:
@@ -53,6 +58,8 @@ func play(sound_name: String) -> void:
 	# One-shot AudioStreamPlayer that frees itself on finish.
 	var player: AudioStreamPlayer = AudioStreamPlayer.new()
 	player.stream = stream
+	# Mute below threshold instead of mapping to -inf dB.
+	player.volume_db = -80.0 if volume_scale <= 0.001 else linear_to_db(volume_scale)
 	add_child(player)
 	player.finished.connect(player.queue_free)
 	player.play()

@@ -41,6 +41,16 @@ var session_coins: int = 0
 ## restarts.
 var best_scores: Dictionary[String, int] = {}
 
+# ---------------------------------------------------------------------------
+# Settings — persisted, mutated by the pause-menu sliders.
+# ---------------------------------------------------------------------------
+
+## Linear 0..1 master bus volume multiplier. Default biased low because
+## the procedural square waves are bright.
+var setting_master_volume: float = 0.7
+var setting_sfx_volume: float = 1.0
+var setting_music_volume: float = 0.7
+
 ## True after the player clears the final stage — title screen reads this
 ## to swap the prompt for a "GAME CLEAR" celebration line.
 var game_cleared: bool = false
@@ -206,6 +216,9 @@ func save_to_file() -> void:
 	for key in best_scores.keys():
 		scores[key] = best_scores[key]
 	cfg.set_value("game", "best_scores", scores)
+	cfg.set_value("settings", "master_volume", setting_master_volume)
+	cfg.set_value("settings", "sfx_volume", setting_sfx_volume)
+	cfg.set_value("settings", "music_volume", setting_music_volume)
 	cfg.save(SAVE_PATH)
 
 
@@ -230,6 +243,23 @@ func load_from_file() -> void:
 	best_scores.clear()
 	for key in loaded_scores.keys():
 		best_scores[String(key)] = int(loaded_scores[key])
+	setting_master_volume = float(cfg.get_value("settings", "master_volume", 0.7))
+	setting_sfx_volume    = float(cfg.get_value("settings", "sfx_volume", 1.0))
+	setting_music_volume  = float(cfg.get_value("settings", "music_volume", 0.7))
+	apply_audio_settings()
+
+
+## Pushes the three volume settings into AudioServer + the per-bus
+## volume_scale fields on Sfx and Music. Called from load_from_file and
+## from the pause menu after slider changes.
+func apply_audio_settings() -> void:
+	if test_mode:
+		return
+	var master_db: float = -80.0 if setting_master_volume <= 0.001 else linear_to_db(setting_master_volume)
+	AudioServer.set_bus_volume_db(0, master_db)
+	Sfx.volume_scale = setting_sfx_volume
+	Music.volume_scale = setting_music_volume
+	Music.apply_volume()
 
 # ---------------------------------------------------------------------------
 # Scene routing

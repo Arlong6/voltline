@@ -28,6 +28,9 @@ const TURRET_SCENE: PackedScene = preload("res://scenes/turret.tscn")
 const SPIKE_SCENE: PackedScene = preload("res://scenes/spike.tscn")
 const CHECKPOINT_SCENE: PackedScene = preload("res://scenes/checkpoint.tscn")
 const HEAL_STATION_SCENE: PackedScene = preload("res://scenes/heal_station.tscn")
+const MOVING_PLATFORM_SCENE: PackedScene = preload("res://scenes/moving_platform.tscn")
+const LASER_BEAM_SCENE: PackedScene = preload("res://scenes/laser_beam.tscn")
+const CRUSHER_SCENE: PackedScene = preload("res://scenes/crusher.tscn")
 const GRID_ZERO_SCENE: PackedScene = preload("res://scenes/grid_zero.tscn")
 
 const PLAYER_SPAWN: Vector2 = Vector2(40.0, 160.0)
@@ -123,6 +126,7 @@ func _ready() -> void:
 	_spawn_drones()
 	_spawn_turrets()
 	_spawn_spikes()
+	_spawn_hazards()
 	_spawn_heal_station()
 	_spawn_checkpoint()
 	_spawn_grid_zero()
@@ -233,6 +237,31 @@ func _spawn_heal_station() -> void:
 	var station: HealStation = HEAL_STATION_SCENE.instantiate() as HealStation
 	station.position = HEAL_STATION_POS
 	add_child(station)
+
+
+# v0.59 hazards — one of each new type so the player meets them all
+# before the GRID-0 fight.
+func _spawn_hazards() -> void:
+	# Vertical mover bridging the gap above the wall-jump shaft.
+	var mover: MovingPlatform = MOVING_PLATFORM_SCENE.instantiate() as MovingPlatform
+	mover.position = Vector2(580.0, 80.0)
+	mover.travel = Vector2(0.0, 64.0)
+	mover.period = 3.6
+	add_child(mover)
+	# Pulsing laser blocking the corridor leading to the boss arena.
+	var laser: LaserBeam = LASER_BEAM_SCENE.instantiate() as LaserBeam
+	laser.position = Vector2(750.0, 144.0)
+	laser.size = Vector2(8.0, 64.0)
+	laser.period = 2.2
+	laser.on_duty = 0.32
+	add_child(laser)
+	# Crusher over the spike strip near (770, 176) — landing under it
+	# during the slam is instant pain.
+	var crusher: Crusher = CRUSHER_SCENE.instantiate() as Crusher
+	crusher.position = Vector2(680.0, 36.0)
+	crusher.slam_distance = 120.0
+	crusher.idle_time = 1.6
+	add_child(crusher)
 
 
 func _spawn_checkpoint() -> void:
