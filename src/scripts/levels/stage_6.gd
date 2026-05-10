@@ -32,6 +32,10 @@ const MOVING_PLATFORM_SCENE: PackedScene = preload("res://scenes/moving_platform
 const LASER_BEAM_SCENE: PackedScene = preload("res://scenes/laser_beam.tscn")
 const CRUSHER_SCENE: PackedScene = preload("res://scenes/crusher.tscn")
 const DESTRUCTIBLE_WALL_SCENE: PackedScene = preload("res://scenes/destructible_wall.tscn")
+const SWITCH_PANEL_SCENE: PackedScene = preload("res://scenes/switch_panel.tscn")
+const DOOR_GATE_SCENE: PackedScene = preload("res://scenes/door_gate.tscn")
+const CONVEYOR_SCENE: PackedScene = preload("res://scenes/conveyor_belt.tscn")
+const CRUMBLING_SCENE: PackedScene = preload("res://scenes/crumbling_platform.tscn")
 const COIN_SCENE: PackedScene = preload("res://scenes/coin.tscn")
 const GRID_ZERO_SCENE: PackedScene = preload("res://scenes/grid_zero.tscn")
 
@@ -131,6 +135,7 @@ func _ready() -> void:
 	_spawn_hazards()
 	_spawn_heal_station()
 	_spawn_hidden_room(80.0, 15)
+	_spawn_mechanism_room()
 	_spawn_checkpoint()
 	_spawn_grid_zero()
 	_build_hud()
@@ -255,6 +260,49 @@ func _spawn_hidden_room(wall_x: float, coin_count: int) -> void:
 	for i in coin_count:
 		var coin: Coin = COIN_SCENE.instantiate() as Coin
 		coin.position = Vector2(wall_x + 16.0 + float(i) * 8.0, 168.0)
+		add_child(coin)
+
+
+# v0.62 — "mechanism room" packs all 4 new elements into the mid-stage
+# corridor: a switch+door puzzle, a conveyor belt the player has to fight
+# against, a chain of crumbling platforms, and a coin reward beyond the door.
+func _spawn_mechanism_room() -> void:
+	# --- Switch + Door pair ---
+	# Switch sits up on a turret-friendly ledge at (380, 84). Player has
+	# to shoot it from the platform at y=100. The door blocks horizontal
+	# travel at x=470 (just past the existing turret).
+	var switch_panel: SwitchPanel = SWITCH_PANEL_SCENE.instantiate() as SwitchPanel
+	switch_panel.position = Vector2(380.0, 84.0)
+	add_child(switch_panel)
+	var door: DoorGate = DOOR_GATE_SCENE.instantiate() as DoorGate
+	door.position = Vector2(470.0, 160.0)
+	door.size = Vector2(8.0, 40.0)
+	door.open_drop = 40.0
+	add_child(door)
+	switch_panel.triggered.connect(door.open)
+
+	# --- Conveyor belt — pushes RIGHT to help the player reach the door,
+	# placed atop the door's "before" ledge so they don't get pushed past it.
+	var conveyor: ConveyorBelt = CONVEYOR_SCENE.instantiate() as ConveyorBelt
+	conveyor.position = Vector2(440.0, 152.0)
+	conveyor.size = Vector2(48.0, 6.0)
+	conveyor.belt_speed = 80.0
+	add_child(conveyor)
+
+	# --- Crumbling platform chain — three stepping stones past the door
+	# at y=140; each shakes for 0.5s after the player lands, then drops.
+	for i in 3:
+		var crumb: CrumblingPlatform = CRUMBLING_SCENE.instantiate() as CrumblingPlatform
+		crumb.position = Vector2(530.0 + float(i) * 56.0, 140.0)
+		crumb.size = Vector2(48.0, 8.0)
+		crumb.step_delay = 0.45
+		crumb.shake_duration = 0.3
+		add_child(crumb)
+
+	# Reward — 6 coins lined up just past the crumbling chain.
+	for i in 6:
+		var coin: Coin = COIN_SCENE.instantiate() as Coin
+		coin.position = Vector2(720.0 + float(i) * 8.0, 100.0)
 		add_child(coin)
 
 

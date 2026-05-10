@@ -1,0 +1,14 @@
+[gd_scene load_steps=3 format=3 uid="uid://b1voltlineconveyor"]
+
+[ext_resource type="Script" path="res://scripts/conveyor_belt.gd" id="1_conveyor"]
+
+[sub_resource type="RectangleShape2D" id="RectShape_conveyor"]
+size = Vector2(64, 8)
+
+[node name="ConveyorBelt" type="AnimatableBody2D"]
+collision_layer = 1
+collision_mask = 0
+script = ExtResource("1_conveyor")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+shape = SubResource("RectShape_conveyor")

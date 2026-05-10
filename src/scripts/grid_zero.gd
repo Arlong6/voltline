@@ -118,29 +118,71 @@ func _summon_minion(use_kamikaze: bool) -> void:
 		parent.add_child(drone)
 
 
-# Phase-aware bullet pattern.
+# v0.62 — phase-aware RANDOMIZED pattern picker. Each attack tick picks
+# from a per-phase pool of distinct patterns (no longer fixed) and
+# randomises the wait time so cadence breathes.
 func _fire_at_player() -> void:
 	var player: Node2D = get_tree().get_first_node_in_group("player")
 	if player == null:
 		return
 	var direction: Vector2 = (player.global_position - global_position).normalized()
-	var hp_pct: float = float(hp) / float(max_hp)
+	var hp_pct: float = float(hp) / float(max_hp) if max_hp > 0 else 0.0
+
+	var pool: PackedStringArray
 	if hp_pct < _GZ_PHASE_3_HP_PCT:
-		# 11-bullet wide spread.
-		var spread: float = deg_to_rad(_GZ_SPREAD_DEG_P3)
-		for i in range(-5, 6):
-			var angle: float = spread * float(i) / 5.0
-			_spawn_enemy_bullet(direction.rotated(angle))
+		# All 4 patterns + biased toward heavier ones.
+		pool = PackedStringArray([
+			"spread", "radial", "volley", "spread", "radial", "aimed",
+		])
 	elif hp_pct < _GZ_PHASE_2_HP_PCT:
-		# 5-bullet medium spread.
-		var spread: float = deg_to_rad(_GZ_SPREAD_DEG_P2)
-		for i in range(-2, 3):
-			var angle: float = spread * float(i) / 2.0
-			_spawn_enemy_bullet(direction.rotated(angle))
+		# Spread + volley + occasional single shot.
+		pool = PackedStringArray(["spread", "volley", "aimed", "spread"])
 	else:
-		_spawn_enemy_bullet(direction)
+		# Phase 1: still mostly aimed but throw in occasional volley to
+		# stop the player from camping a single line.
+		pool = PackedStringArray(["aimed", "aimed", "aimed", "volley"])
+
+	var pattern: String = pool[randi() % pool.size()]
+	match pattern:
+		"aimed":  _attack_aimed_single(direction)
+		"spread": _attack_spread_n(direction, 5, _GZ_SPREAD_DEG_P2)
+		"radial": _attack_radial_8()
+		"volley": _attack_volley_3(direction)
+
+	# Cadence jitter — 0.3s..0.7s overrides the fixed shoot_interval set
+	# by Boss._physics_process. Without this the player learns the rhythm
+	# and trivialises positioning.
+	_shoot_timer = randf_range(0.3, 0.7)
+
 	if not Game.test_mode:
 		Sfx.play("shoot_enemy")
+
+
+# ----- attack patterns -------------------------------------------------------
+
+func _attack_aimed_single(direction: Vector2) -> void:
+	_spawn_enemy_bullet(direction)
+
+
+func _attack_spread_n(direction: Vector2, count: int, spread_deg: float) -> void:
+	var spread: float = deg_to_rad(spread_deg)
+	var half: int = (count - 1) / 2
+	for i in range(-half, half + 1):
+		var angle: float = spread * float(i) / float(maxi(half, 1))
+		_spawn_enemy_bullet(direction.rotated(angle))
+
+
+func _attack_radial_8() -> void:
+	for i in 8:
+		var angle: float = TAU * float(i) / 8.0
+		_spawn_enemy_bullet(Vector2.RIGHT.rotated(angle))
+
+
+# 3 quick shots with small angle jitter — reads as a concentrated burst.
+func _attack_volley_3(direction: Vector2) -> void:
+	for i in 3:
+		var jitter: float = deg_to_rad(randf_range(-6.0, 6.0))
+		_spawn_enemy_bullet(direction.rotated(jitter))
 
 
 func _draw() -> void:
