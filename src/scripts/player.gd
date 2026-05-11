@@ -218,6 +218,8 @@ const _COLOR_CHARGE_READY: Color = Color("#FFE066")
 const _COLOR_CHARGE_LV2: Color = Color("#FF8030")
 
 const BULLET_SCENE: PackedScene = preload("res://scenes/bullet.tscn")
+const _SUBWEAPON_MISSILE_SCENE: PackedScene = preload("res://scenes/subweapon_missile.tscn")
+const _SUBWEAPON_SHOCKWAVE_SCENE: PackedScene = preload("res://scenes/subweapon_shockwave.tscn")
 
 const _HURT_BOX_SIZE: Vector2 = Vector2(12.0, 16.0)
 
@@ -280,6 +282,13 @@ func _physics_process(delta: float) -> void:
 	var dash_pressed: bool = dash_held and not _input_dash_held_last
 	_input_dash_held_last = dash_held
 
+	# v0.64 — sub-weapon: SHIFT fires equipped if cooldown is ready.
+	# Q cycles between equipped sub-weapons (resets cooldown briefly).
+	if Input.is_action_just_pressed("subweapon") and Game.subweapon_ready():
+		_fire_subweapon()
+	if Input.is_action_just_pressed("cycle_subweapon"):
+		Game.cycle_subweapon()
+
 	# Wall state from the previous frame's move_and_slide. Normal points
 	# AWAY from the wall surface, so a wall on the player's LEFT yields
 	# wall_normal.x = +1, and a wall on the RIGHT yields wall_normal.x = -1.
@@ -299,7 +308,14 @@ func _physics_process(delta: float) -> void:
 		wall_right
 	)
 
-	if tick_shoot(delta, shoot_pressed):
+	# Rapid-fire buff halves the effective shoot cooldown; tick_shoot
+	# reads `shoot_interval` directly, so we temporarily mutate it.
+	var saved_si: float = shoot_interval
+	if Game.is_buff_active(Game.BUFF_RAPID_FIRE):
+		shoot_interval = saved_si * 0.5
+	var fired_normal: bool = tick_shoot(delta, shoot_pressed)
+	shoot_interval = saved_si
+	if fired_normal:
 		_spawn_bullet(0)
 		Sfx.play("shoot_normal")
 	var charge_fired: int = tick_charge(delta, shoot_held, shoot_released)
@@ -511,13 +527,15 @@ func _on_enemy_hit(body: Node2D) -> void:
 		take_damage(contact_damage)
 
 
-## Inflicts `amount` damage. No-op while invincible. If hp drops to 0 the
-## player is sent back to spawn with full hp; otherwise hp drops, the
-## hurt SFX plays, knockback fires, and invincibility is armed for the
-## blink window.
+## Inflicts `amount` damage. No-op while invincible (post-hit blink OR
+## v0.64 invincibility buff). If hp drops to 0 the player is sent back
+## to spawn with full hp; otherwise hp drops, the hurt SFX plays,
+## knockback fires, and invincibility is armed for the blink window.
 func take_damage(amount: int) -> void:
 	if _invincible_timer > 0.0:
 		return
+	if Game.is_buff_active(Game.BUFF_INVINCIBLE):
+		return  # buff overrides damage entirely; no hit counter bump
 	hp = maxi(hp - amount, 0)
 	_invincible_timer = invincibility_duration
 	Game.register_hit()
@@ -616,6 +634,30 @@ func _spawn_air_dash_puff() -> void:
 	burst.gravity = 80.0
 	burst.global_position = global_position + Vector2(-float(facing) * 6.0, 0.0)
 	parent.add_child(burst)
+
+
+# v0.64 — Fires the currently-equipped sub-weapon. Caller has already
+# checked Game.subweapon_ready().
+func _fire_subweapon() -> void:
+	var parent: Node = get_parent()
+	if parent == null:
+		return
+	match Game.equipped_subweapon:
+		Game.SUBWEAPON_MISSILE:
+			var m: SubweaponMissile = _SUBWEAPON_MISSILE_SCENE.instantiate() as SubweaponMissile
+			m.direction = Vector2(float(facing), 0.0)
+			m.global_position = global_position + Vector2(
+				bullet_offset.x * float(facing),
+				bullet_offset.y - 2.0
+			)
+			parent.add_child(m)
+		Game.SUBWEAPON_SHOCKWAVE:
+			var s: SubweaponShockwave = _SUBWEAPON_SHOCKWAVE_SCENE.instantiate() as SubweaponShockwave
+			s.global_position = global_position
+			parent.add_child(s)
+			Game.request_shake(2.5)
+	Game.consume_subweapon()
+	Sfx.play("dash")  # repurpose the noise blip as a sub-weapon launch sting
 
 
 # Instantiates a Bullet pointed in the player's facing and attaches it as

@@ -32,10 +32,26 @@ func _ready() -> void:
 	body_entered.connect(_on_body_entered)
 
 
+const _MAGNET_RANGE: float = 80.0
+const _MAGNET_PULL_SPEED: float = 240.0
+
+
 func _process(delta: float) -> void:
 	if Game.test_mode:
 		return
 	_t += delta
+	# v0.64 — coin magnet buff pulls coins toward the player when within
+	# range. Overrides the idle bob during pull.
+	if Game.is_buff_active(Game.BUFF_MAGNET):
+		var player: Node2D = get_tree().get_first_node_in_group("player")
+		if player != null:
+			var to_player: Vector2 = player.global_position - global_position
+			if to_player.length() <= _MAGNET_RANGE:
+				var step: Vector2 = to_player.normalized() * _MAGNET_PULL_SPEED * delta
+				global_position += step
+				_spawn_y = position.y  # follow drift so bob doesn't fight it
+				queue_redraw()
+				return
 	# Gentle vertical bob.
 	position.y = _spawn_y + sin(_t * 3.0) * bob_amplitude
 	queue_redraw()

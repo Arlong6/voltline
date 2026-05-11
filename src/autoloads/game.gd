@@ -58,6 +58,102 @@ var total_runs: int = 0
 var _hit_stop_remaining: float = 0.0
 var _hit_stop_scale: float = 1.0
 
+# ---------------------------------------------------------------------------
+# Timed power-up buffs (v0.64)
+# ---------------------------------------------------------------------------
+
+## Active buffs and their remaining seconds. Keys: BUFF_* string ids.
+## Stages / HUD / damage / coin logic check `is_buff_active(key)` or read
+## `buffs[key]` directly. Cleared on reset_run.
+var buffs: Dictionary[String, float] = {}
+
+const BUFF_INVINCIBLE: String = "invincible"
+const BUFF_DAMAGE_UP:  String = "damage_up"
+const BUFF_RAPID_FIRE: String = "rapid_fire"
+const BUFF_MAGNET:     String = "magnet"
+
+const _BUFF_DURATIONS: Dictionary = {
+	BUFF_INVINCIBLE: 8.0,
+	BUFF_DAMAGE_UP:  10.0,
+	BUFF_RAPID_FIRE: 10.0,
+	BUFF_MAGNET:     15.0,
+}
+
+
+# ---------------------------------------------------------------------------
+# Sub-weapons (v0.64)
+# ---------------------------------------------------------------------------
+
+const SUBWEAPON_MISSILE:   String = "missile"
+const SUBWEAPON_SHOCKWAVE: String = "shockwave"
+
+# Declared as `var` because PackedStringArray constructors are not
+# constant expressions in GDScript. Treat as immutable in code.
+var SUBWEAPON_LIST: PackedStringArray = PackedStringArray([
+	SUBWEAPON_MISSILE, SUBWEAPON_SHOCKWAVE,
+])
+
+const SUBWEAPON_COOLDOWNS: Dictionary = {
+	SUBWEAPON_MISSILE:   2.0,
+	SUBWEAPON_SHOCKWAVE: 3.5,
+}
+
+const SUBWEAPON_LABELS: Dictionary = {
+	SUBWEAPON_MISSILE:   "MISSILE",
+	SUBWEAPON_SHOCKWAVE: "SHOCKWAVE",
+}
+
+## Currently equipped sub-weapon key. Player cycles via Q. Persisted.
+var equipped_subweapon: String = SUBWEAPON_MISSILE
+
+## Remaining cooldown seconds before the equipped sub-weapon can fire
+## again. Decremented in _process; consumed when Player presses SHIFT.
+var subweapon_cooldown_remaining: float = 0.0
+
+
+## Cycles the equipped sub-weapon to the next entry in SUBWEAPON_LIST.
+## Resets the cooldown so swapping isn't a free reroll on a ready charge.
+func cycle_subweapon() -> void:
+	var idx: int = SUBWEAPON_LIST.find(equipped_subweapon)
+	idx = (idx + 1) % SUBWEAPON_LIST.size()
+	equipped_subweapon = SUBWEAPON_LIST[idx]
+	subweapon_cooldown_remaining = 0.5  # short post-swap warmup
+	save_to_file()
+
+
+## True when the equipped sub-weapon is off cooldown and can fire.
+func subweapon_ready() -> bool:
+	return subweapon_cooldown_remaining <= 0.0
+
+
+## Called by Player after spawning the projectile/effect — arms the
+## per-weapon cooldown.
+func consume_subweapon() -> void:
+	subweapon_cooldown_remaining = float(SUBWEAPON_COOLDOWNS.get(
+		equipped_subweapon, 2.0
+	))
+
+
+## Activates `buff_key` for its default duration. If already active,
+## extends to the longer of the two (so picking up two of the same
+## doesn't waste the second one).
+func activate_buff(buff_key: String) -> void:
+	var duration: float = float(_BUFF_DURATIONS.get(buff_key, 0.0))
+	if duration <= 0.0:
+		return
+	var current: float = float(buffs.get(buff_key, 0.0))
+	buffs[buff_key] = maxf(current, duration)
+
+
+## True if the named buff has remaining duration.
+func is_buff_active(buff_key: String) -> bool:
+	return float(buffs.get(buff_key, 0.0)) > 0.0
+
+
+## Remaining seconds for the named buff (0 if not active).
+func buff_remaining(buff_key: String) -> float:
+	return float(buffs.get(buff_key, 0.0))
+
 
 ## Requests a screen-shake on the active player's camera. Pure relay
 ## so callers (Bullet, Boss death, etc.) don't have to look up the
@@ -90,6 +186,18 @@ func hit_stop(duration: float = 0.06, scale: float = 0.05) -> void:
 func _process(delta: float) -> void:
 	if current_area.begins_with("stage_") or current_area == "boss_rush":
 		session_time += delta
+	# Decay active buffs.
+	if not buffs.is_empty():
+		var expired: Array[String] = []
+		for key in buffs.keys():
+			buffs[key] = buffs[key] - delta
+			if buffs[key] <= 0.0:
+				expired.append(key)
+		for key in expired:
+			buffs.erase(key)
+	# Decay sub-weapon cooldown.
+	if subweapon_cooldown_remaining > 0.0:
+		subweapon_cooldown_remaining = maxf(subweapon_cooldown_remaining - delta, 0.0)
 	if _hit_stop_remaining > 0.0:
 		# Decay in WALL-clock seconds, not delta (delta is already
 		# stretched by time_scale). get_process_delta_time() returns
@@ -323,6 +431,7 @@ func save_to_file() -> void:
 	cfg.set_value("settings", "master_volume", setting_master_volume)
 	cfg.set_value("settings", "sfx_volume", setting_sfx_volume)
 	cfg.set_value("settings", "music_volume", setting_music_volume)
+	cfg.set_value("loadout", "subweapon", equipped_subweapon)
 	cfg.save(SAVE_PATH)
 
 
@@ -355,6 +464,7 @@ func load_from_file() -> void:
 	setting_master_volume = float(cfg.get_value("settings", "master_volume", 0.7))
 	setting_sfx_volume    = float(cfg.get_value("settings", "sfx_volume", 1.0))
 	setting_music_volume  = float(cfg.get_value("settings", "music_volume", 0.7))
+	equipped_subweapon = String(cfg.get_value("loadout", "subweapon", SUBWEAPON_MISSILE))
 	apply_audio_settings()
 
 
@@ -415,3 +525,4 @@ func reset_run() -> void:
 	session_kills = 0
 	session_coins = 0
 	total_runs += 1
+	buffs.clear()

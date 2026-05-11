@@ -296,6 +296,12 @@ func _build_hud() -> void:
 	coins.size = Vector2(60.0, 12.0)
 	_hud_layer.add_child(coins)
 
+	# Active buff strip (v0.64).
+	var buff_hud: BuffHud = BuffHud.new()
+	buff_hud.position = Vector2(8.0, 24.0)
+	buff_hud.size = Vector2(300.0, 14.0)
+	_hud_layer.add_child(buff_hud)
+
 	# Fade overlay — last child so it covers every other HUD element.
 	_fade_rect = ColorRect.new()
 	_fade_rect.color = Color(0.0, 0.0, 0.0, 1.0)

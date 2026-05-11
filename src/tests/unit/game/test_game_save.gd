@@ -25,6 +25,9 @@ func before_each() -> void:
 	Game.best_scores.clear()
 	Game.best_times.clear()
 	Game.total_runs = 0
+	Game.buffs.clear()
+	Game.equipped_subweapon = Game.SUBWEAPON_MISSILE
+	Game.subweapon_cooldown_remaining = 0.0
 
 
 func after_each() -> void:

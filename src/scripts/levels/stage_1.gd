@@ -298,6 +298,12 @@ func _build_hud() -> void:
 	coins.size = Vector2(60.0, 12.0)
 	_hud_layer.add_child(coins)
 
+	# Active buff strip (v0.64).
+	var buff_hud: BuffHud = BuffHud.new()
+	buff_hud.position = Vector2(8.0, 24.0)
+	buff_hud.size = Vector2(300.0, 14.0)
+	_hud_layer.add_child(buff_hud)
+
 	# Fade overlay — added last so it sits on top of every other HUD
 	# element. Starts opaque (we just transitioned in from black) and
 	# tweens to transparent on entry.

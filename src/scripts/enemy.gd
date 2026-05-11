@@ -113,10 +113,13 @@ func die() -> void:
 	if not Game.test_mode:
 		Sfx.play("enemy_die")
 		_spawn_death_particles()
-		# 30% chance to drop a health pickup; otherwise drop a coin.
-		# Mutually exclusive so the player has to choose between
-		# resource and HP pressure.
-		if randf() < 0.30:
+		# v0.64 — 5% chance to drop a timed power-up. Mutually exclusive
+		# with the existing coin / health drops so the player has to
+		# choose between resource pressure and the buff window.
+		var roll: float = randf()
+		if roll < 0.05:
+			_drop_power_up()
+		elif roll < 0.35:
 			_drop_health()
 		else:
 			_drop_coins(1, 8.0)
@@ -139,12 +142,29 @@ func _spawn_death_particles() -> void:
 # spread so they don't all overlap. Coins persist after queue_free.
 const _COIN_SCENE: PackedScene = preload("res://scenes/coin.tscn")
 const _HEALTH_SCENE: PackedScene = preload("res://scenes/health_pickup.tscn")
+const _POWERUP_SCENE: PackedScene = preload("res://scenes/power_up.tscn")
+
+# Declared as `var` — PackedStringArray constructors are not constant
+# expressions in GDScript. Treat as immutable in code.
+static var _POWERUP_TYPES: PackedStringArray = PackedStringArray([
+	"invincible", "damage_up", "rapid_fire", "magnet",
+])
 
 func _drop_health() -> void:
 	var parent: Node = get_parent()
 	if parent == null:
 		return
 	var pickup: HealthPickup = _HEALTH_SCENE.instantiate() as HealthPickup
+	pickup.global_position = global_position + Vector2(0.0, -2.0)
+	parent.add_child(pickup)
+
+
+func _drop_power_up() -> void:
+	var parent: Node = get_parent()
+	if parent == null:
+		return
+	var pickup: PowerUp = _POWERUP_SCENE.instantiate() as PowerUp
+	pickup.buff_type = _POWERUP_TYPES[randi() % _POWERUP_TYPES.size()]
 	pickup.global_position = global_position + Vector2(0.0, -2.0)
 	parent.add_child(pickup)
 

@@ -106,13 +106,19 @@ func _on_body_entered(body: Node2D) -> void:
 
 
 ## Damage value for the bullet's charge level. Exposed so tests can
-## assert the table without poking at private constants.
+## assert the table without poking at private constants. v0.64: the
+## damage_up buff adds +1 to whatever level fired.
 func damage_for_level() -> int:
+	var base: int
 	if charge_level >= 2:
-		return 4
-	if charge_level >= 1:
-		return 2
-	return 1
+		base = 4
+	elif charge_level >= 1:
+		base = 2
+	else:
+		base = 1
+	if Game.is_buff_active(Game.BUFF_DAMAGE_UP):
+		base += 1
+	return base
 
 
 ## Pure-logic position step. Tests call this directly with a synthesized
