@@ -27,7 +27,8 @@ const PROMPT_TEXT: String = "PRESS X TO START"
 const CLEAR_TEXT: String = "GAME CLEAR  -  4: STAGE INFINITY"
 const TRUE_CLEAR_TEXT: String = "TRUE CLEAR  -  5: BOSS RUSH"
 const RUSH_CLEAR_TEXT: String = "RUSH CLEAR  -  6: THE ARCHITECT"
-const ARCHITECT_TEXT: String = "ARCHITECT FELL  -  PRESS X"
+const ARCHITECT_TEXT: String = "ARCHITECT FELL  -  7: LABYRINTH"
+const LABYRINTH_TEXT: String = "LABYRINTH MAPPED  -  PRESS X"
 
 const STORY_LINES: Array[String] = [
 	"21XX. THE OUTER GRID HAS FALLEN.",
@@ -54,10 +55,11 @@ const SHOP_SHOOT_MAX: int = 2
 const FADE_IN_DURATION: float = 0.5
 const FADE_OUT_DURATION: float = 0.5
 
-# v0.61 — title is paged. Page 0 = main (story + shop), page 1 = stage
-# select grid + run stats. TAB flips pages.
+# Title is paged. TAB rotates between MAIN → STAGES → ACHIEVEMENTS → MAIN.
 const PAGE_MAIN: int = 0
 const PAGE_STAGES: int = 1
+const PAGE_ACHIEVEMENTS: int = 2
+const _PAGE_COUNT: int = 3
 
 # Stage-select rows. (key, display name).
 const STAGE_LIST: Array = [
@@ -68,6 +70,7 @@ const STAGE_LIST: Array = [
 	["stage_5",   "5 // INFINITY"],
 	["boss_rush", "B // BOSS RUSH"],
 	["stage_6",   "6 // ARCHITECT"],
+	["stage_7",   "7 // LABYRINTH"],
 ]
 
 var _t: float = 0.0
@@ -98,18 +101,21 @@ func _unhandled_input(event: InputEvent) -> void:
 	if not (event is InputEventKey) or not event.pressed or event.echo:
 		return
 
-	# TAB always toggles between the main page and the stage-select page.
+	# TAB rotates through MAIN → STAGES → ACHIEVEMENTS → MAIN.
 	if event.physical_keycode == KEY_TAB:
-		_page = PAGE_STAGES if _page == PAGE_MAIN else PAGE_MAIN
+		_page = (_page + 1) % _PAGE_COUNT
 		_stage_cursor = 0
 		queue_redraw()
 		get_viewport().set_input_as_handled()
 		return
 
-	if _page == PAGE_MAIN:
-		_handle_main_input(event)
-	else:
-		_handle_stage_select_input(event)
+	match _page:
+		PAGE_MAIN:
+			_handle_main_input(event)
+		PAGE_STAGES:
+			_handle_stage_select_input(event)
+		# Achievements page is read-only — no input handlers needed
+		# beyond TAB cycling away.
 
 
 func _handle_main_input(event: InputEventKey) -> void:
@@ -198,13 +204,18 @@ func _try_buy(slot: int) -> void:
 func _draw() -> void:
 	draw_rect(Rect2(0, 0, VIEWPORT_W, VIEWPORT_H), COLOR_BG)
 	var font: Font = ThemeDB.fallback_font
-	if _page == PAGE_STAGES:
-		_draw_stage_select(font)
-	else:
-		_draw_main(font)
-	# TAB hint always visible — gives players the breadcrumb to find the
-	# stage select page.
-	var hint: String = "TAB: STAGE SELECT" if _page == PAGE_MAIN else "TAB: BACK"
+	match _page:
+		PAGE_STAGES:        _draw_stage_select(font)
+		PAGE_ACHIEVEMENTS:  _draw_achievements(font)
+		_:                  _draw_main(font)
+	# TAB hint always visible — labels the next page so the player can
+	# discover the rotation.
+	var hint: String
+	match _page:
+		PAGE_MAIN:         hint = "TAB: STAGE SELECT"
+		PAGE_STAGES:       hint = "TAB: ACHIEVEMENTS"
+		PAGE_ACHIEVEMENTS: hint = "TAB: BACK"
+		_:                 hint = ""
 	_draw_centered(font, hint, 188.0, STORY_FONT_SIZE, COLOR_NEON_DARK)
 
 
@@ -232,7 +243,9 @@ func _draw_main(font: Font) -> void:
 
 	var blink: bool = sin(_t * 4.0) > 0.0
 	if blink:
-		if Game.architect_cleared:
+		if Game.labyrinth_cleared:
+			_draw_centered(font, LABYRINTH_TEXT, 200.0, PROMPT_FONT_SIZE, COLOR_CLEAR)
+		elif Game.architect_cleared:
 			_draw_centered(font, ARCHITECT_TEXT, 200.0, PROMPT_FONT_SIZE, COLOR_CLEAR)
 		elif Game.boss_rush_cleared:
 			_draw_centered(font, RUSH_CLEAR_TEXT, 200.0, PROMPT_FONT_SIZE, COLOR_CLEAR)
@@ -288,6 +301,35 @@ func _draw_stage_select(font: Font) -> void:
 		stats_y, STORY_FONT_SIZE, COLOR_FLAVOR)
 	_draw_centered(font, "↑↓ NAVIGATE   X ENTER", 174.0,
 		STORY_FONT_SIZE, COLOR_NEON_DARK)
+
+
+func _draw_achievements(font: Font) -> void:
+	var defs: Array = Game.ACHIEVEMENT_DEFS
+	var unlocked_count: int = 0
+	for entry in defs:
+		if Game.has_achievement(String(entry["id"])):
+			unlocked_count += 1
+	_draw_centered(font, "// ACHIEVEMENTS — %d / %d" % [unlocked_count, defs.size()],
+		18.0, SUBTITLE_FONT_SIZE, COLOR_NEON)
+	# Two columns of 6 entries each.
+	var col_w: float = float(VIEWPORT_W) * 0.5
+	for i in defs.size():
+		var col: int = i / 6
+		var row: int = i % 6
+		var x: float = 12.0 + float(col) * col_w
+		var y: float = 38.0 + float(row) * 22.0
+		var entry: Dictionary = defs[i]
+		var id: String = String(entry["id"])
+		var owned: bool = Game.has_achievement(id)
+		var color: Color = COLOR_GOLD if owned else COLOR_SHOP_DIM
+		var check: String = "[X]" if owned else "[ ]"
+		draw_string(font, Vector2(x, y),
+			"%s %s" % [check, String(entry["name"])],
+			HORIZONTAL_ALIGNMENT_LEFT, -1, STORY_FONT_SIZE + 1, color)
+		# Description line in smaller dim text right below.
+		draw_string(font, Vector2(x + 12.0, y + 9.0),
+			String(entry["description"]),
+			HORIZONTAL_ALIGNMENT_LEFT, -1, STORY_FONT_SIZE - 1, COLOR_NEON_DARK)
 
 
 # Renders one shop slot row. Greys out the price label when the player

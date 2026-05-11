@@ -23,7 +23,9 @@ const _GLYPHS: Dictionary = {
 }
 
 # Order in which to render buffs (deterministic regardless of pickup order).
-const _ORDER: PackedStringArray = PackedStringArray([
+# PackedStringArray constructors aren't constant expressions in GDScript,
+# so this lives as a `static var` even though it's treated as immutable.
+static var _ORDER: PackedStringArray = PackedStringArray([
 	"invincible", "damage_up", "rapid_fire", "magnet",
 ])
 

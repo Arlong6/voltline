@@ -48,6 +48,71 @@ var best_times: Dictionary[String, float] = {}
 ## reset_run() so dying + retrying counts as one run.
 var total_runs: int = 0
 
+## Lifetime count of DestructibleWall instances destroyed across all
+## runs. Drives the TREASURE_HUNTER achievement.
+var walls_broken: int = 0
+
+# ---------------------------------------------------------------------------
+# Achievements (v0.65) — see ACHIEVEMENT_DEFS for the full table.
+# ---------------------------------------------------------------------------
+
+## Bool state per achievement id. Persisted across runs.
+var achievements: Dictionary[String, bool] = {}
+
+## Achievement definitions in display order. Each entry:
+##   id           — stable key, also the dict key in `achievements`
+##   name         — short title for the HUD
+##   description  — one-line explanation of how to earn it
+const ACHIEVEMENT_DEFS: Array = [
+	{"id": "first_clear",   "name": "FIRST CLEAR",      "description": "Beat Stage 1"},
+	{"id": "game_clear",    "name": "GAME CLEAR",       "description": "Beat TYRANT-Z (Stage 4)"},
+	{"id": "true_clear",    "name": "TRUE CLEAR",       "description": "Beat TYRANT-Z² (Stage 5)"},
+	{"id": "rush_clear",    "name": "RUSH CLEAR",       "description": "Beat Boss Rush mode"},
+	{"id": "architect",     "name": "ARCHITECT FELL",   "description": "Beat GRID-0 (Stage 6)"},
+	{"id": "s_rank",        "name": "S-RANK",           "description": "Get S+ rank on any stage"},
+	{"id": "sss_rank",      "name": "SSS-RANK",         "description": "Get SSS rank on any stage"},
+	{"id": "flawless",      "name": "FLAWLESS",         "description": "Clear any stage with 0 hits"},
+	{"id": "speedrun",      "name": "SPEEDRUN",         "description": "Clear Stage 1 in under 60s"},
+	{"id": "treasure",      "name": "TREASURE HUNTER",  "description": "Break 5 hidden walls"},
+	{"id": "century",       "name": "CENTURY",          "description": "Hold 100+ coins"},
+	{"id": "marathoner",    "name": "MARATHONER",       "description": "Start 50 stage runs"},
+]
+
+
+## Unlocks the achievement if not already unlocked. Idempotent; safe to
+## call from any trigger site. Returns true on the unlock tick (so HUD
+## can spawn a toast banner) and false if already owned.
+func unlock_achievement(id: String) -> bool:
+	if bool(achievements.get(id, false)):
+		return false
+	achievements[id] = true
+	save_to_file()
+	return true
+
+
+## True if the named achievement has been earned.
+func has_achievement(id: String) -> bool:
+	return bool(achievements.get(id, false))
+
+
+## Re-checks the passive achievements (coin / runs / walls thresholds).
+## Called from add_coin, reset_run, register_wall_break. Cheap to call
+## from anywhere.
+func check_passive_achievements() -> void:
+	if coins >= 100:
+		unlock_achievement("century")
+	if total_runs >= 50:
+		unlock_achievement("marathoner")
+	if walls_broken >= 5:
+		unlock_achievement("treasure")
+
+
+## Called by DestructibleWall when it destroy()s — drives the
+## treasure-hunter achievement count.
+func register_wall_break() -> void:
+	walls_broken += 1
+	check_passive_achievements()
+
 # ---------------------------------------------------------------------------
 # Hit-stop (v0.63) — Engine.time_scale dial that decays back to 1 over
 # `_hit_stop_remaining` seconds. Triggered by impactful events (Lv2 super
@@ -233,8 +298,12 @@ var true_cleared: bool = false
 var boss_rush_cleared: bool = false
 
 ## True after the player defeats GRID-0 in Stage 6 (the post-rush
-## nightmare unlock). Final flag in the progression chain.
+## nightmare unlock).
 var architect_cleared: bool = false
+
+## True after the player clears Stage 7 (LABYRINTH) — the multi-room
+## post-architect mission. Final flag in the progression chain.
+var labyrinth_cleared: bool = false
 
 # ---------------------------------------------------------------------------
 # Cutscene staging — the cutscene scene reads these on _ready.
@@ -275,6 +344,7 @@ const UPGRADE_SHOOT_DELTA: float = 0.03
 func add_coin(amount: int) -> void:
 	coins += amount
 	session_coins += amount
+	check_passive_achievements()
 	save_to_file()
 
 
@@ -345,6 +415,29 @@ func register_clear(stage_key: String) -> bool:
 	var prev_time: float = float(best_times.get(stage_key, INF))
 	if session_time < prev_time:
 		best_times[stage_key] = session_time
+	# v0.65 — achievement triggers tied to clear context.
+	if stage_key == "stage_1":
+		unlock_achievement("first_clear")
+		if session_time < 60.0:
+			unlock_achievement("speedrun")
+	if stage_key == "stage_7":
+		labyrinth_cleared = true
+	var rank: String = rank_for_score(score)
+	if rank == "SSS":
+		unlock_achievement("sss_rank")
+		unlock_achievement("s_rank")  # SSS implies S
+	elif rank == "SS" or rank == "S":
+		unlock_achievement("s_rank")
+	if session_hits == 0:
+		unlock_achievement("flawless")
+	if game_cleared:
+		unlock_achievement("game_clear")
+	if true_cleared:
+		unlock_achievement("true_clear")
+	if boss_rush_cleared:
+		unlock_achievement("rush_clear")
+	if architect_cleared:
+		unlock_achievement("architect")
 	save_to_file()
 	return is_new_best
 
@@ -389,6 +482,8 @@ func is_stage_unlocked(stage_key: String) -> bool:
 			return true_cleared
 		"stage_6":
 			return boss_rush_cleared
+		"stage_7":
+			return architect_cleared
 	return false
 
 
@@ -417,6 +512,7 @@ func save_to_file() -> void:
 	cfg.set_value("game", "true_cleared", true_cleared)
 	cfg.set_value("game", "boss_rush_cleared", boss_rush_cleared)
 	cfg.set_value("game", "architect_cleared", architect_cleared)
+	cfg.set_value("game", "labyrinth_cleared", labyrinth_cleared)
 	# Best scores — flatten the typed dictionary into a plain dict for
 	# ConfigFile (Variant-friendly).
 	var scores: Dictionary = {}
@@ -432,6 +528,12 @@ func save_to_file() -> void:
 	cfg.set_value("settings", "sfx_volume", setting_sfx_volume)
 	cfg.set_value("settings", "music_volume", setting_music_volume)
 	cfg.set_value("loadout", "subweapon", equipped_subweapon)
+	# Achievements (v0.65) — flat dict mapping id → bool.
+	var ach: Dictionary = {}
+	for key in achievements.keys():
+		ach[key] = bool(achievements[key])
+	cfg.set_value("achievements", "unlocked", ach)
+	cfg.set_value("game", "walls_broken", walls_broken)
 	cfg.save(SAVE_PATH)
 
 
@@ -452,6 +554,7 @@ func load_from_file() -> void:
 	true_cleared = cfg.get_value("game", "true_cleared", false)
 	boss_rush_cleared = cfg.get_value("game", "boss_rush_cleared", false)
 	architect_cleared = cfg.get_value("game", "architect_cleared", false)
+	labyrinth_cleared = cfg.get_value("game", "labyrinth_cleared", false)
 	var loaded_scores: Dictionary = cfg.get_value("game", "best_scores", {})
 	best_scores.clear()
 	for key in loaded_scores.keys():
@@ -465,6 +568,11 @@ func load_from_file() -> void:
 	setting_sfx_volume    = float(cfg.get_value("settings", "sfx_volume", 1.0))
 	setting_music_volume  = float(cfg.get_value("settings", "music_volume", 0.7))
 	equipped_subweapon = String(cfg.get_value("loadout", "subweapon", SUBWEAPON_MISSILE))
+	var loaded_ach: Dictionary = cfg.get_value("achievements", "unlocked", {})
+	achievements.clear()
+	for key in loaded_ach.keys():
+		achievements[String(key)] = bool(loaded_ach[key])
+	walls_broken = int(cfg.get_value("game", "walls_broken", 0))
 	apply_audio_settings()
 
 
@@ -493,6 +601,7 @@ const LEVEL_PATHS: Dictionary[String, String] = {
 	"stage_5": "res://scenes/levels/stage_5.tscn",
 	"boss_rush": "res://scenes/levels/boss_rush.tscn",
 	"stage_6":   "res://scenes/levels/stage_6.tscn",
+	"stage_7":   "res://scenes/levels/stage_7.tscn",
 	"cutscene":  "res://scenes/cutscene.tscn",
 }
 
@@ -526,3 +635,4 @@ func reset_run() -> void:
 	session_coins = 0
 	total_runs += 1
 	buffs.clear()
+	check_passive_achievements()

@@ -76,6 +76,7 @@ func destroy() -> void:
 	# walks through. Hide the visual.
 	collision_layer = 0
 	visible = false
+	Game.register_wall_break()
 	if not Game.test_mode:
 		_spawn_break_particles()
 		Sfx.play("explode")

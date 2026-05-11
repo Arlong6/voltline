@@ -13,6 +13,8 @@ func before_each() -> void:
 	Game.game_cleared = false
 	Game.true_cleared = false
 	Game.boss_rush_cleared = false
+	Game.architect_cleared = false
+	Game.labyrinth_cleared = false
 
 
 func after_each() -> void:
@@ -57,6 +59,23 @@ func test_stage_6_requires_boss_rush_cleared() -> void:
 		"stage_6 requires boss_rush_cleared, not just true_cleared")
 	Game.boss_rush_cleared = true
 	assert_true(Game.is_stage_unlocked("stage_6"))
+
+
+func test_stage_7_requires_architect_cleared() -> void:
+	Game.boss_rush_cleared = true
+	assert_false(Game.is_stage_unlocked("stage_7"),
+		"stage_7 requires architect_cleared, not just boss_rush_cleared")
+	Game.architect_cleared = true
+	assert_true(Game.is_stage_unlocked("stage_7"))
+
+
+func test_register_stage_7_clear_sets_labyrinth_flag() -> void:
+	assert_false(Game.labyrinth_cleared,
+		"labyrinth_cleared should start false in test fixtures")
+	Game.session_time = 30.0
+	Game.register_clear("stage_7")
+	assert_true(Game.labyrinth_cleared,
+		"register_clear('stage_7') must flip labyrinth_cleared")
 
 
 func test_unknown_key_returns_false() -> void:
