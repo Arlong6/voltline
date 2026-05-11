@@ -544,6 +544,13 @@ func set_checkpoint(pos: Vector2) -> void:
 	_spawn_position = pos
 
 
+## Public shake entry — Game.request_shake() calls this on the active
+## player so bullet hits, boss deaths, etc. can drive the camera kick
+## without each caller looking up the player themselves.
+func shake(strength: float) -> void:
+	_shake_camera(strength)
+
+
 # Tweens the child Camera2D's offset for a brief left-right kick.
 # No-op if the camera hasn't been attached yet (e.g. test environment).
 func _shake_camera(strength: float) -> void:

@@ -49,6 +49,59 @@ var best_times: Dictionary[String, float] = {}
 var total_runs: int = 0
 
 # ---------------------------------------------------------------------------
+# Hit-stop (v0.63) — Engine.time_scale dial that decays back to 1 over
+# `_hit_stop_remaining` seconds. Triggered by impactful events (Lv2 super
+# bullet hits enemy, boss damage taken, big boss death). Visual "freeze"
+# that punches up the moment of impact.
+# ---------------------------------------------------------------------------
+
+var _hit_stop_remaining: float = 0.0
+var _hit_stop_scale: float = 1.0
+
+
+## Requests a screen-shake on the active player's camera. Pure relay
+## so callers (Bullet, Boss death, etc.) don't have to look up the
+## player themselves. No-op in test mode and if no player is in the tree.
+func request_shake(strength: float) -> void:
+	if test_mode:
+		return
+	var tree: SceneTree = (Engine.get_main_loop() as SceneTree)
+	if tree == null:
+		return
+	var player: Node = tree.get_first_node_in_group("player")
+	if player != null and player.has_method("shake"):
+		player.shake(strength)
+
+
+## Triggers a brief slowdown. `duration` is wall-clock seconds the
+## slowdown lasts; `scale` is the time_scale during the freeze (lower =
+## more freeze, 0.0 = full pause). Subsequent calls extend if the new
+## window is heavier.
+func hit_stop(duration: float = 0.06, scale: float = 0.05) -> void:
+	if test_mode:
+		return
+	# Only override if the incoming freeze is at least as heavy.
+	if scale < _hit_stop_scale or _hit_stop_remaining <= 0.0:
+		_hit_stop_scale = scale
+	_hit_stop_remaining = maxf(_hit_stop_remaining, duration)
+	Engine.time_scale = _hit_stop_scale
+
+
+func _process(delta: float) -> void:
+	if current_area.begins_with("stage_") or current_area == "boss_rush":
+		session_time += delta
+	if _hit_stop_remaining > 0.0:
+		# Decay in WALL-clock seconds, not delta (delta is already
+		# stretched by time_scale). get_process_delta_time() returns
+		# unscaled delta when called from _process? Actually it returns
+		# scaled. Use raw delta but factor by 1/time_scale.
+		var wall_delta: float = delta / maxf(_hit_stop_scale, 0.001)
+		_hit_stop_remaining = maxf(_hit_stop_remaining - wall_delta, 0.0)
+		if _hit_stop_remaining <= 0.0:
+			_hit_stop_scale = 1.0
+			Engine.time_scale = 1.0
+
+# ---------------------------------------------------------------------------
 # Settings — persisted, mutated by the pause-menu sliders.
 # ---------------------------------------------------------------------------
 
@@ -342,11 +395,6 @@ func play_cutscene(title: String, lines: PackedStringArray, next: String) -> voi
 	cutscene_lines = lines
 	cutscene_next = next
 	goto_level("cutscene")
-
-
-func _process(delta: float) -> void:
-	if current_area.begins_with("stage_"):
-		session_time += delta
 
 
 ## Resolves a logical key to a scene path and triggers a deferred change.

@@ -94,22 +94,33 @@ func _physics_process(delta: float) -> void:
 	queue_redraw()
 
 
-# Locates the player via the "player" group and spawns 1 or 3 bullets.
-# Phase 1 (hp >= phase_2_hp_pct * max_hp): single tracked bullet.
-# Phase 2 (hp <  phase_2_hp_pct * max_hp): 3-bullet spread at ±spread_angle.
+# v0.63 — phase-aware RANDOMIZED pattern picker. R-08 keeps a small pool
+# (it's the first boss) but no longer fires a fixed pattern. Subclasses
+# (FinalBoss / TyrantZ / TyrantZ2 / GridZero) override with their own pools.
 func _fire_at_player() -> void:
 	var player: Node2D = get_tree().get_first_node_in_group("player")
 	if player == null:
 		return
 	var direction: Vector2 = (player.global_position - global_position).normalized()
 	var hp_pct: float = float(hp) / float(max_hp)
+
+	var pool: PackedStringArray
 	if hp_pct < phase_2_hp_pct:
-		var spread_rad: float = deg_to_rad(spread_angle_deg)
-		_spawn_enemy_bullet(direction.rotated(-spread_rad))
-		_spawn_enemy_bullet(direction)
-		_spawn_enemy_bullet(direction.rotated(spread_rad))
+		# Phase 2: spread + volley + occasional aimed.
+		pool = PackedStringArray(["spread", "spread", "volley", "aimed"])
 	else:
-		_spawn_enemy_bullet(direction)
+		# Phase 1: mostly aimed but throw in one volley so the player
+		# can't camp a single line forever.
+		pool = PackedStringArray(["aimed", "aimed", "aimed", "volley"])
+
+	var pattern: String = pool[randi() % pool.size()]
+	match pattern:
+		"aimed":  _attack_aimed_single(direction)
+		"spread": _attack_spread_n(direction, 3, spread_angle_deg)
+		"volley": _attack_volley_3(direction)
+
+	_shoot_timer = randf_range(0.4, 0.9)
+
 	if not Game.test_mode:
 		Sfx.play("shoot_enemy")
 
@@ -119,6 +130,47 @@ func _spawn_enemy_bullet(direction: Vector2) -> void:
 	bullet.velocity = direction * bullet_speed
 	bullet.global_position = global_position
 	get_parent().add_child(bullet)
+
+
+# ---------------------------------------------------------------------------
+# Shared attack pattern helpers (v0.63 — subclasses pick from these)
+# ---------------------------------------------------------------------------
+
+## Single tracked bullet aimed at the player.
+func _attack_aimed_single(direction: Vector2) -> void:
+	_spawn_enemy_bullet(direction)
+
+
+## N-bullet symmetric fan with `spread_deg` half-angle. count must be odd.
+func _attack_spread_n(direction: Vector2, count: int, spread_deg: float) -> void:
+	var spread: float = deg_to_rad(spread_deg)
+	var half: int = (count - 1) / 2
+	for i in range(-half, half + 1):
+		var angle: float = spread * float(i) / float(maxi(half, 1))
+		_spawn_enemy_bullet(direction.rotated(angle))
+
+
+## 8-bullet 360° radial burst originating from the boss.
+func _attack_radial_8() -> void:
+	for i in 8:
+		var angle: float = TAU * float(i) / 8.0
+		_spawn_enemy_bullet(Vector2.RIGHT.rotated(angle))
+
+
+## 4-bullet cardinal radial (up/down/left/right).
+func _attack_radial_4() -> void:
+	_spawn_enemy_bullet(Vector2.UP)
+	_spawn_enemy_bullet(Vector2.DOWN)
+	_spawn_enemy_bullet(Vector2.LEFT)
+	_spawn_enemy_bullet(Vector2.RIGHT)
+
+
+## 3 quick shots aimed at the player with small angle jitter — reads
+## as a concentrated burst.
+func _attack_volley_3(direction: Vector2) -> void:
+	for i in 3:
+		var jitter: float = deg_to_rad(randf_range(-6.0, 6.0))
+		_spawn_enemy_bullet(direction.rotated(jitter))
 
 
 # Override Enemy.die so the stage gets a single signal it can hook into,
@@ -134,6 +186,10 @@ func die() -> void:
 		Sfx.play("enemy_die")
 		_spawn_boss_death_particles()
 		_drop_coins(10, 18.0)
+		# Climactic hit-stop + heavy shake on boss death — punctuates
+		# the kill in a way that regular grunts shouldn't.
+		Game.hit_stop(0.22, 0.0)
+		Game.request_shake(6.0)
 	queue_free()
 
 

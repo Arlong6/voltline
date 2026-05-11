@@ -37,22 +37,30 @@ func _ready() -> void:
 	_hop_timer = hop_interval * 0.5
 
 
-# Override Boss._fire_at_player: phase 1 = single tracked bullet (same
-# as parent), phase 2 = 5-bullet spread at ±_OMEGA_SPREAD_DEG.
+# v0.63 — randomised pattern picker. OMEGA-X mixes spread + volley +
+# aimed in phase 2; phase 1 keeps it readable with mostly aimed shots.
 func _fire_at_player() -> void:
 	var player: Node2D = get_tree().get_first_node_in_group("player")
 	if player == null:
 		return
 	var direction: Vector2 = (player.global_position - global_position).normalized()
 	var hp_pct: float = float(hp) / float(max_hp)
+
+	var pool: PackedStringArray
 	if hp_pct < phase_2_hp_pct:
-		var spread_rad: float = deg_to_rad(_OMEGA_SPREAD_DEG)
-		# Five-bullet spread evenly distributed across the full ±spread.
-		for i in range(-2, 3):
-			var angle: float = spread_rad * float(i) * 0.5
-			_spawn_enemy_bullet(direction.rotated(angle))
+		pool = PackedStringArray(["spread5", "spread5", "volley", "aimed", "volley"])
 	else:
-		_spawn_enemy_bullet(direction)
+		pool = PackedStringArray(["aimed", "aimed", "volley", "spread3"])
+
+	var pattern: String = pool[randi() % pool.size()]
+	match pattern:
+		"aimed":   _attack_aimed_single(direction)
+		"spread3": _attack_spread_n(direction, 3, _OMEGA_SPREAD_DEG * 0.6)
+		"spread5": _attack_spread_n(direction, 5, _OMEGA_SPREAD_DEG)
+		"volley":  _attack_volley_3(direction)
+
+	_shoot_timer = randf_range(0.35, 0.75)
+
 	if not Game.test_mode:
 		Sfx.play("shoot_enemy")
 

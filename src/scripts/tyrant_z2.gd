@@ -64,21 +64,32 @@ func _on_hop_started() -> void:
 		_spawn_enemy_bullet(dir)
 
 
-# Phase 2 = 9-bullet ±32° spread instead of 3.
+# v0.63 — randomised picker. TYRANT-Z² is the heaviest of the spread
+# bosses: phase 2 mixes huge 9-bullet spread, 8-direction radial, and
+# fast 3-shot volleys. Phase 1 ramps up with 5-bullet spread + volley.
 func _fire_at_player() -> void:
 	var player: Node2D = get_tree().get_first_node_in_group("player")
 	if player == null:
 		return
 	var direction: Vector2 = (player.global_position - global_position).normalized()
 	var hp_pct: float = float(hp) / float(max_hp)
+
+	var pool: PackedStringArray
 	if hp_pct < phase_2_hp_pct:
-		var spread_rad: float = deg_to_rad(_T2_SPREAD_DEG)
-		# 9 evenly-distributed shots from -spread to +spread.
-		for i in range(-4, 5):
-			var angle: float = spread_rad * float(i) / 4.0
-			_spawn_enemy_bullet(direction.rotated(angle))
+		pool = PackedStringArray(["spread9", "spread9", "radial8", "volley", "spread5"])
 	else:
-		_spawn_enemy_bullet(direction)
+		pool = PackedStringArray(["spread5", "aimed", "volley", "spread5"])
+
+	var pattern: String = pool[randi() % pool.size()]
+	match pattern:
+		"aimed":   _attack_aimed_single(direction)
+		"spread5": _attack_spread_n(direction, 5, _T2_SPREAD_DEG * 0.6)
+		"spread9": _attack_spread_n(direction, 9, _T2_SPREAD_DEG)
+		"radial8": _attack_radial_8()
+		"volley":  _attack_volley_3(direction)
+
+	_shoot_timer = randf_range(0.25, 0.55)
+
 	if not Game.test_mode:
 		Sfx.play("shoot_enemy")
 

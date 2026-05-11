@@ -85,10 +85,20 @@ func _on_body_entered(body: Node2D) -> void:
 		return
 	if body is Enemy and body.is_alive:
 		body.take_damage(damage_for_level())
+		# Hit-stop + camera shake on impact — bigger for Lv2 super,
+		# regular for Lv1, none for Lv0 (so rapid-fire stays snappy).
+		if charge_level >= 2:
+			Game.hit_stop(0.10, 0.02)
+			Game.request_shake(3.0)
+		elif charge_level >= 1:
+			Game.hit_stop(0.05, 0.15)
+			Game.request_shake(1.5)
 		if charge_level >= 2:
 			return  # piercing — keep flying
 	elif body is DestructibleWall and not body.is_destroyed:
 		body.take_damage(damage_for_level())
+		if body.is_destroyed:
+			Game.hit_stop(0.10, 0.02)
 		# Pierce on Lv2 — only if our shot was the one that broke it.
 		if charge_level >= 2 and body.is_destroyed:
 			return

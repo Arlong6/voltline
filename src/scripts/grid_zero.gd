@@ -158,31 +158,8 @@ func _fire_at_player() -> void:
 		Sfx.play("shoot_enemy")
 
 
-# ----- attack patterns -------------------------------------------------------
-
-func _attack_aimed_single(direction: Vector2) -> void:
-	_spawn_enemy_bullet(direction)
-
-
-func _attack_spread_n(direction: Vector2, count: int, spread_deg: float) -> void:
-	var spread: float = deg_to_rad(spread_deg)
-	var half: int = (count - 1) / 2
-	for i in range(-half, half + 1):
-		var angle: float = spread * float(i) / float(maxi(half, 1))
-		_spawn_enemy_bullet(direction.rotated(angle))
-
-
-func _attack_radial_8() -> void:
-	for i in 8:
-		var angle: float = TAU * float(i) / 8.0
-		_spawn_enemy_bullet(Vector2.RIGHT.rotated(angle))
-
-
-# 3 quick shots with small angle jitter — reads as a concentrated burst.
-func _attack_volley_3(direction: Vector2) -> void:
-	for i in 3:
-		var jitter: float = deg_to_rad(randf_range(-6.0, 6.0))
-		_spawn_enemy_bullet(direction.rotated(jitter))
+# attack pattern helpers live in Boss base (_attack_*) — shared across
+# all bosses since v0.63.
 
 
 func _draw() -> void:

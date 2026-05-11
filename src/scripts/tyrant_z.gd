@@ -34,21 +34,32 @@ func _ready() -> void:
 	_hop_timer = hop_interval * 0.5
 
 
-# Override fire pattern: phase 2 = 7-bullet spread instead of 3.
+# v0.63 — randomised picker. TYRANT-Z mixes wide 7-bullet spread + radial
+# bursts + volley in phase 2; phase 1 cycles aimed + small spread + volley
+# so the player can't park in one spot.
 func _fire_at_player() -> void:
 	var player: Node2D = get_tree().get_first_node_in_group("player")
 	if player == null:
 		return
 	var direction: Vector2 = (player.global_position - global_position).normalized()
 	var hp_pct: float = float(hp) / float(max_hp)
+
+	var pool: PackedStringArray
 	if hp_pct < phase_2_hp_pct:
-		var spread_rad: float = deg_to_rad(_TYRANT_SPREAD_DEG)
-		# Evenly distribute 7 shots from -spread to +spread.
-		for i in range(-3, 4):
-			var angle: float = spread_rad * float(i) / 3.0
-			_spawn_enemy_bullet(direction.rotated(angle))
+		pool = PackedStringArray(["spread7", "spread7", "radial", "volley", "aimed"])
 	else:
-		_spawn_enemy_bullet(direction)
+		pool = PackedStringArray(["aimed", "spread3", "volley", "aimed"])
+
+	var pattern: String = pool[randi() % pool.size()]
+	match pattern:
+		"aimed":   _attack_aimed_single(direction)
+		"spread3": _attack_spread_n(direction, 3, _TYRANT_SPREAD_DEG * 0.5)
+		"spread7": _attack_spread_n(direction, 7, _TYRANT_SPREAD_DEG)
+		"radial":  _attack_radial_4()
+		"volley":  _attack_volley_3(direction)
+
+	_shoot_timer = randf_range(0.3, 0.7)
+
 	if not Game.test_mode:
 		Sfx.play("shoot_enemy")
 
