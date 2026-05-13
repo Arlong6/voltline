@@ -115,6 +115,16 @@ func _unhandled_input(event: InputEvent) -> void:
 		get_viewport().set_input_as_handled()
 		return
 
+	# v0.67 — F9 debug cheat: unlock every stage + every clear flag, so
+	# the tester can skip straight into late-game content without having
+	# to grind through the unlock chain. Plays the coin SFX as a beep.
+	if event.physical_keycode == KEY_F9:
+		_dev_unlock_all()
+		Sfx.play("coin_pickup")
+		queue_redraw()
+		get_viewport().set_input_as_handled()
+		return
+
 	match _page:
 		PAGE_MAIN:
 			_handle_main_input(event)
@@ -341,7 +351,7 @@ func _draw_stage_select(font: Font) -> void:
 			Game.best_scores.size(), STAGE_LIST.size() - 1  # exclude DAILY entry
 		],
 		stats_y, STORY_FONT_SIZE, COLOR_FLAVOR)
-	_draw_centered(font, "↑↓ NAVIGATE   X ENTER", 180.0,
+	_draw_centered(font, "↑↓ NAVIGATE   X ENTER   F9 UNLOCK ALL", 180.0,
 		STORY_FONT_SIZE, COLOR_NEON_DARK)
 
 
@@ -372,6 +382,23 @@ func _draw_achievements(font: Font) -> void:
 		draw_string(font, Vector2(x + 12.0, y + 9.0),
 			String(entry["description"]),
 			HORIZONTAL_ALIGNMENT_LEFT, -1, STORY_FONT_SIZE - 1, COLOR_NEON_DARK)
+
+
+# v0.67 debug — seeds best_scores for the first three stages (the rest
+# unlock via *_cleared flags) and flips every clear flag true, so the
+# whole stage list becomes accessible from Stage Select. Saves the
+# state so a restart preserves the unlock.
+func _dev_unlock_all() -> void:
+	for key in ["stage_1", "stage_2", "stage_3"]:
+		if int(Game.best_scores.get(key, 0)) <= 0:
+			Game.best_scores[key] = 1
+	Game.game_cleared = true
+	Game.true_cleared = true
+	Game.boss_rush_cleared = true
+	Game.architect_cleared = true
+	Game.labyrinth_cleared = true
+	Game.circuit_cleared = true
+	Game.save_to_file()
 
 
 # Renders the skin slot row. Shows the current skin name in its actual
