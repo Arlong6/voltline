@@ -32,6 +32,12 @@ const _BULLET_SIZE: Vector2 = Vector2(6.0, 6.0)
 ## before the bullet enters the tree.
 var velocity: Vector2 = Vector2.ZERO
 
+## Downward acceleration (px/s²). Default 0 = straight-line shot. The
+## Spitter sets this positive so its lob arcs over cover. Named
+## `gravity_accel` (not `gravity`) so we don't shadow Area2D's own
+## `gravity` property — Godot rejects the shadowed name from outside.
+var gravity_accel: float = 0.0
+
 # Cumulative absolute distance travelled — drives expiry.
 var _distance_traveled: float = 0.0
 
@@ -51,8 +57,11 @@ func _process(delta: float) -> void:
 		queue_free()
 
 
-## Pure-logic position step. Tests call this directly.
+## Pure-logic position step. Tests call this directly. Applies gravity to
+## `velocity.y` first (0 by default → straight line), then advances.
 func tick(delta: float) -> void:
+	if gravity_accel != 0.0:
+		velocity.y += gravity_accel * delta
 	var step: Vector2 = velocity * delta
 	position += step
 	_distance_traveled += step.length()

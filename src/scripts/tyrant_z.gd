@@ -23,6 +23,7 @@ const _TYRANT_SPREAD_DEG: float = 28.0
 
 
 func _ready() -> void:
+	boss_name = "TYRANT-Z"
 	max_hp = 50
 	shoot_interval = 0.4
 	bullet_speed = 260.0

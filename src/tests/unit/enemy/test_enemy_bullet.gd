@@ -51,3 +51,23 @@ func test_bullet_expiry_uses_total_distance_with_diagonal_motion() -> void:
 	bullet.tick(1.0)
 	assert_true(bullet.is_expired(),
 		"diagonal travel must accumulate by Euclidean length")
+
+
+# v0.66 — gravity-affected lob (Spitter's projectile).
+func test_bullet_gravity_accumulates_downward_velocity() -> void:
+	bullet.position = Vector2(0.0, 0.0)
+	bullet.velocity = Vector2(100.0, -100.0)  # launched up-right
+	bullet.gravity_accel =200.0
+	bullet.tick(0.5)
+	# After 0.5s at g=200, velocity.y should have grown by +100 → 0.0
+	assert_almost_eq(bullet.velocity.y, 0.0, 0.001,
+		"gravity must add g*delta to velocity.y each tick")
+
+
+func test_bullet_with_zero_gravity_travels_in_a_straight_line() -> void:
+	bullet.position = Vector2(0.0, 0.0)
+	bullet.velocity = Vector2(100.0, 0.0)
+	bullet.gravity_accel =0.0
+	bullet.tick(0.5)
+	assert_almost_eq(bullet.velocity.y, 0.0, 0.001,
+		"zero gravity should leave velocity.y untouched")

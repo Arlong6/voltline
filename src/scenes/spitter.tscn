@@ -1,0 +1,24 @@
+[gd_scene load_steps=4 format=3 uid="uid://b1voltlinespitter"]
+
+[ext_resource type="Script" path="res://scripts/spitter.gd" id="1_spitter"]
+
+[sub_resource type="RectangleShape2D" id="RectShape_spitter_body"]
+size = Vector2(16, 14)
+
+[sub_resource type="RectangleShape2D" id="RectShape_spitter_hurt"]
+size = Vector2(16, 14)
+
+[node name="Spitter" type="CharacterBody2D"]
+collision_layer = 4
+collision_mask = 1
+script = ExtResource("1_spitter")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+shape = SubResource("RectShape_spitter_body")
+
+[node name="HurtBox" type="Area2D" parent="."]
+collision_layer = 0
+collision_mask = 2
+
+[node name="HurtCollider" type="CollisionShape2D" parent="HurtBox"]
+shape = SubResource("RectShape_spitter_hurt")

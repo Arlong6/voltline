@@ -47,6 +47,7 @@ var _last_hop_timer: float = 0.0
 
 
 func _ready() -> void:
+	boss_name = "GRID-0"
 	max_hp = 80
 	shoot_interval = 0.4
 	bullet_speed = 280.0

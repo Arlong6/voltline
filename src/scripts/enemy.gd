@@ -90,7 +90,11 @@ func tick_movement(delta: float, on_wall: bool = false) -> void:
 
 ## Bullet handler calls this on hit. Subtracts `amount` from hp; calls
 ## die() when hp drops to 0 or below. No-op if already dead.
-func take_damage(amount: int) -> void:
+##
+## `from_pos` is the world position the hit came from (the bullet's
+## position). The base enemy ignores it; subclasses with directional
+## armour (Shieldbearer) read it to decide whether the hit lands.
+func take_damage(amount: int, from_pos: Vector2 = Vector2.INF) -> void:
 	if not is_alive:
 		return
 	hp -= amount
@@ -150,13 +154,18 @@ static var _POWERUP_TYPES: PackedStringArray = PackedStringArray([
 	"invincible", "damage_up", "rapid_fire", "magnet",
 ])
 
+# NOTE: pickup add_child is deferred. die() runs inside the physics
+# query flush (bullet body_entered → take_damage → die); a pickup's
+# Area2D toggles monitoring in _ready, which the physics server rejects
+# mid-flush ("Can't change this state while flushing queries"). Deferring
+# the add_child pushes _ready to after the flush completes.
 func _drop_health() -> void:
 	var parent: Node = get_parent()
 	if parent == null:
 		return
 	var pickup: HealthPickup = _HEALTH_SCENE.instantiate() as HealthPickup
 	pickup.global_position = global_position + Vector2(0.0, -2.0)
-	parent.add_child(pickup)
+	parent.add_child.call_deferred(pickup)
 
 
 func _drop_power_up() -> void:
@@ -166,7 +175,7 @@ func _drop_power_up() -> void:
 	var pickup: PowerUp = _POWERUP_SCENE.instantiate() as PowerUp
 	pickup.buff_type = _POWERUP_TYPES[randi() % _POWERUP_TYPES.size()]
 	pickup.global_position = global_position + Vector2(0.0, -2.0)
-	parent.add_child(pickup)
+	parent.add_child.call_deferred(pickup)
 
 
 func _drop_coins(count: int, spread: float) -> void:
@@ -178,7 +187,7 @@ func _drop_coins(count: int, spread: float) -> void:
 		coin.global_position = global_position + Vector2(
 			randf_range(-spread, spread), -2.0
 		)
-		parent.add_child(coin)
+		parent.add_child.call_deferred(coin)
 
 
 func _draw() -> void:

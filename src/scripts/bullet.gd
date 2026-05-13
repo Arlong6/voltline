@@ -84,7 +84,7 @@ func _on_body_entered(body: Node2D) -> void:
 	if Game.test_mode:
 		return
 	if body is Enemy and body.is_alive:
-		body.take_damage(damage_for_level())
+		body.take_damage(damage_for_level(), global_position)
 		# Hit-stop + camera shake on impact — bigger for Lv2 super,
 		# regular for Lv1, none for Lv0 (so rapid-fire stays snappy).
 		if charge_level >= 2:

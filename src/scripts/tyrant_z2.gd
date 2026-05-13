@@ -31,6 +31,7 @@ var _last_hop_timer: float = 0.0
 
 
 func _ready() -> void:
+	boss_name = "TYRANT-Z²"
 	max_hp = 60
 	shoot_interval = 0.3
 	bullet_speed = 280.0

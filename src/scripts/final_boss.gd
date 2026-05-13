@@ -26,6 +26,7 @@ const _OMEGA_SPREAD_DEG: float = 20.0
 func _ready() -> void:
 	# Override Boss + Enemy defaults BEFORE setting hp / timers so the
 	# new values flow through.
+	boss_name = "OMEGA-X"
 	max_hp = 42
 	shoot_interval = 0.5
 	bullet_speed = 240.0

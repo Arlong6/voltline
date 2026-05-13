@@ -17,6 +17,10 @@ func before_each() -> void:
 	Game.game_cleared = false
 	Game.true_cleared = false
 	Game.boss_rush_cleared = false
+	Game.architect_cleared = false
+	Game.labyrinth_cleared = false
+	Game.last_clear_coin_bonus = 0
+	Game.coins = 0
 
 
 func after_each() -> void:
@@ -156,3 +160,63 @@ func test_reset_run_zeros_all_session_counters() -> void:
 	assert_eq(Game.session_hits, 0)
 	assert_eq(Game.session_kills, 0)
 	assert_eq(Game.session_coins, 0)
+
+
+# ---------------------------------------------------------------------------
+# v0.66 — rank coin bonus
+# ---------------------------------------------------------------------------
+
+func test_rank_coin_bonus_table() -> void:
+	assert_eq(Game.rank_coin_bonus("SSS"), 50)
+	assert_eq(Game.rank_coin_bonus("SS"),  35)
+	assert_eq(Game.rank_coin_bonus("S"),   25)
+	assert_eq(Game.rank_coin_bonus("A"),   15)
+	assert_eq(Game.rank_coin_bonus("B"),   10)
+	assert_eq(Game.rank_coin_bonus("C"),    5)
+	assert_eq(Game.rank_coin_bonus("D"),    0)
+	assert_eq(Game.rank_coin_bonus("xxx"),  0,
+		"unknown rank strings return 0")
+
+
+func test_register_clear_pays_rank_bonus_to_persistent_coins() -> void:
+	# Force an SS-tier score: fast run, no hits, plenty of kills.
+	Game.session_time = 10.0
+	Game.session_hits = 0
+	Game.session_kills = 10
+	Game.session_coins = 0
+	Game.register_clear("stage_1")
+	# Score ≈ 1000 + 1900 + 1500 + 250 = 4650 → SS → 35 coins
+	assert_eq(Game.last_clear_coin_bonus, 35,
+		"SS-tier clear should award the SS coin bonus")
+	assert_eq(Game.coins, 35,
+		"the bonus must land in persistent coins")
+
+
+func test_register_clear_d_rank_pays_nothing() -> void:
+	# Slow + hit-heavy → D tier
+	Game.session_time = 400.0
+	Game.session_hits = 20
+	Game.register_clear("stage_1")
+	assert_eq(Game.last_clear_coin_bonus, 0,
+		"D-tier clear should not pay any coin bonus")
+
+
+func test_reset_run_clears_last_bonus() -> void:
+	Game.last_clear_coin_bonus = 35
+	Game.reset_run()
+	assert_eq(Game.last_clear_coin_bonus, 0,
+		"reset_run must clear last_clear_coin_bonus")
+
+
+func test_format_score_summary_includes_bonus_line_when_paid() -> void:
+	Game.last_clear_coin_bonus = 25
+	var summary: String = Game.format_score_summary(false)
+	assert_true(summary.contains("+25 COINS"),
+		"summary should append the +N COINS line when a bonus was paid")
+
+
+func test_format_score_summary_omits_bonus_line_when_zero() -> void:
+	Game.last_clear_coin_bonus = 0
+	var summary: String = Game.format_score_summary(false)
+	assert_false(summary.contains("COINS"),
+		"summary should hide the bonus line when no bonus was paid")

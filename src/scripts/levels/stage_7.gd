@@ -33,6 +33,8 @@ const COLOR_TEXT: Color = Color("#7AC8FF")
 const PLAYER_SCENE: PackedScene = preload("res://scenes/player.tscn")
 const ENEMY_SCENE: PackedScene = preload("res://scenes/enemy.tscn")
 const TURRET_SCENE: PackedScene = preload("res://scenes/turret.tscn")
+const SHIELDBEARER_SCENE: PackedScene = preload("res://scenes/shieldbearer.tscn")
+const SPITTER_SCENE: PackedScene = preload("res://scenes/spitter.tscn")
 const SPIKE_SCENE: PackedScene = preload("res://scenes/spike.tscn")
 const CHECKPOINT_SCENE: PackedScene = preload("res://scenes/checkpoint.tscn")
 const HEAL_STATION_SCENE: PackedScene = preload("res://scenes/heal_station.tscn")
@@ -217,6 +219,13 @@ func _spawn_room_a() -> void:
 	var turret: Turret = TURRET_SCENE.instantiate() as Turret
 	turret.position = ROOM_A_TURRET
 	add_child(turret)
+	# Shieldbearer guarding the corridor — can't be shot from the front,
+	# the player has to dash past it or catch its exposed back at a wall.
+	var shieldbearer: Shieldbearer = SHIELDBEARER_SCENE.instantiate() as Shieldbearer
+	shieldbearer.position = Vector2(400.0, 168.0)
+	shieldbearer.patrol_min_x = 320.0
+	shieldbearer.patrol_max_x = 420.0
+	add_child(shieldbearer)
 	# Switch panel high on the right wall + the door blocking the exit.
 	var switch_panel: SwitchPanel = SWITCH_SCENE.instantiate() as SwitchPanel
 	switch_panel.position = ROOM_A_SWITCH_POS
@@ -251,6 +260,11 @@ func _spawn_room_b() -> void:
 		crumb.step_delay = 0.45
 		crumb.shake_duration = 0.3
 		add_child(crumb)
+	# Spitter on the floor below the crumbling chain — lobs arcing rounds
+	# up onto the platforms while the player is mid-climb.
+	var spitter: Spitter = SPITTER_SCENE.instantiate() as Spitter
+	spitter.position = Vector2(700.0, 170.0)
+	add_child(spitter)
 	# Switch on the high platform + door at the end of Room B.
 	var switch_panel: SwitchPanel = SWITCH_SCENE.instantiate() as SwitchPanel
 	switch_panel.position = ROOM_B_SWITCH_POS

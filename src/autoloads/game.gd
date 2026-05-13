@@ -400,6 +400,29 @@ func rank_for_score(score: int) -> String:
 	return "D"
 
 
+## Coin payout awarded on clear for each rank tier. Scales hard at the
+## top so chasing S/SS/SSS actually funds the shop.
+const RANK_COIN_BONUS: Dictionary = {
+	"SSS": 50,
+	"SS":  35,
+	"S":   25,
+	"A":   15,
+	"B":   10,
+	"C":    5,
+	"D":    0,
+}
+
+
+## Coin bonus for a rank string (0 for unknown).
+func rank_coin_bonus(rank: String) -> int:
+	return int(RANK_COIN_BONUS.get(rank, 0))
+
+
+## Coin bonus awarded by the most recent register_clear() — read by
+## format_score_summary so the clear banner can show "+N COINS".
+var last_clear_coin_bonus: int = 0
+
+
 ## Records the current run's score against `stage_key`. Persists the
 ## new best (and the all-flags state) to disk. Returns true if the
 ## score was a new best, so the stage clear screen can show "NEW BEST".
@@ -438,6 +461,12 @@ func register_clear(stage_key: String) -> bool:
 		unlock_achievement("rush_clear")
 	if architect_cleared:
 		unlock_achievement("architect")
+	# v0.66 — pay out a coin bonus scaled by rank. add_coin saves the
+	# file itself; we still call save_to_file below to capture the
+	# best_scores / best_times / clear flags in one write.
+	last_clear_coin_bonus = rank_coin_bonus(rank)
+	if last_clear_coin_bonus > 0:
+		add_coin(last_clear_coin_bonus)
 	save_to_file()
 	return is_new_best
 
@@ -449,7 +478,10 @@ func format_score_summary(is_new_best: bool) -> String:
 	var score: int = compute_score()
 	var rank: String = rank_for_score(score)
 	var tag: String = "  NEW BEST" if is_new_best else ""
-	return "SCORE %d  RANK %s%s" % [score, rank, tag]
+	var bonus_line: String = ""
+	if last_clear_coin_bonus > 0:
+		bonus_line = "\n+%d COINS" % last_clear_coin_bonus
+	return "SCORE %d  RANK %s%s%s" % [score, rank, tag, bonus_line]
 
 
 ## Formats a time in seconds as M:SS.s (e.g., 1:23.4). Used by the
@@ -633,6 +665,7 @@ func reset_run() -> void:
 	session_hits = 0
 	session_kills = 0
 	session_coins = 0
+	last_clear_coin_bonus = 0
 	total_runs += 1
 	buffs.clear()
 	check_passive_achievements()

@@ -39,6 +39,10 @@ extends "res://scripts/enemy.gd"
 ## Half-angle (degrees) of the phase-2 spread relative to the centre shot.
 @export var spread_angle_deg: float = 15.0
 
+## Name shown on the on-screen boss HP bar. Subclasses override in
+## _ready (the bar is spawned deferred, so the override lands in time).
+@export var boss_name: String = "R-08"
+
 # ---------------------------------------------------------------------------
 # Visuals — bigger silhouette than a regular enemy
 # ---------------------------------------------------------------------------
@@ -71,6 +75,32 @@ func _ready() -> void:
 	hp = max_hp  # Enemy._ready does this; explicit here in case super isn't called.
 	_shoot_timer = bullet_initial_delay
 	_hop_timer = hop_interval * 0.5  # phase the first hop slightly out of sync
+
+
+# Spawn the on-screen boss HP bar. Deferred from _enter_tree so subclass
+# _ready (which sets max_hp + boss_name) has already run. The bar lives on
+# its own CanvasLayer parented to the stage, and tears that layer down when
+# the boss dies. _enter_tree (not _ready) so it runs for every subclass —
+# none of them call super._ready().
+func _enter_tree() -> void:
+	if Game.test_mode:
+		return
+	call_deferred("_spawn_hp_bar")
+
+
+func _spawn_hp_bar() -> void:
+	if Game.test_mode or not is_inside_tree():
+		return
+	var parent: Node = get_parent()
+	if parent == null:
+		return
+	var layer: CanvasLayer = CanvasLayer.new()
+	layer.layer = 9  # just under the stage HUD layer (10)
+	var bar: BossHpBar = BossHpBar.new()
+	bar.boss = self
+	bar.boss_name = boss_name
+	layer.add_child(bar)
+	parent.add_child(layer)
 
 
 func _physics_process(delta: float) -> void:
