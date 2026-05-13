@@ -220,6 +220,8 @@ const _COLOR_CHARGE_LV2: Color = Color("#FF8030")
 const BULLET_SCENE: PackedScene = preload("res://scenes/bullet.tscn")
 const _SUBWEAPON_MISSILE_SCENE: PackedScene = preload("res://scenes/subweapon_missile.tscn")
 const _SUBWEAPON_SHOCKWAVE_SCENE: PackedScene = preload("res://scenes/subweapon_shockwave.tscn")
+const _SUBWEAPON_MINE_SCENE: PackedScene = preload("res://scenes/subweapon_mine.tscn")
+const _SUBWEAPON_WAVE_SCENE: PackedScene = preload("res://scenes/subweapon_wave.tscn")
 
 const _HURT_BOX_SIZE: Vector2 = Vector2(12.0, 16.0)
 
@@ -656,6 +658,20 @@ func _fire_subweapon() -> void:
 			s.global_position = global_position
 			parent.add_child(s)
 			Game.request_shake(2.5)
+		Game.SUBWEAPON_MINE:
+			# Drop at the player's feet, slightly above ground so it
+			# settles on the floor next physics tick.
+			var mine: SubweaponMine = _SUBWEAPON_MINE_SCENE.instantiate() as SubweaponMine
+			mine.global_position = global_position + Vector2(0.0, 6.0)
+			parent.add_child(mine)
+		Game.SUBWEAPON_WAVE:
+			var w: SubweaponWave = _SUBWEAPON_WAVE_SCENE.instantiate() as SubweaponWave
+			w.direction = facing
+			w.global_position = global_position + Vector2(
+				bullet_offset.x * float(facing),
+				bullet_offset.y - 2.0
+			)
+			parent.add_child(w)
 	Game.consume_subweapon()
 	Sfx.play("dash")  # repurpose the noise blip as a sub-weapon launch sting
 
@@ -693,14 +709,19 @@ func _draw() -> void:
 	#   • Charge Lv1 (ready) → solid yellow
 	#   • Charging mid-way → pulsing lerp between body and white
 	#   • Otherwise → standard body cyan
-	var body_color: Color = _COLOR_BODY
+	# v0.67 — body tint is the selected skin (Game.SKIN_COLORS[skin_index]),
+	# falling back to the legacy cyan if the index is out of range.
+	var base_color: Color = _COLOR_BODY
+	if Game.skin_index >= 0 and Game.skin_index < Game.SKIN_COLORS.size():
+		base_color = Game.SKIN_COLORS[Game.skin_index]
+	var body_color: Color = base_color
 	if _charge_timer >= charge_threshold_lv2:
 		body_color = _COLOR_CHARGE_LV2
 	elif _charge_timer >= charge_threshold:
 		body_color = _COLOR_CHARGE_READY
 	elif _charge_timer > 0.0:
 		var pulse: float = sin(_charge_timer * 28.0) * 0.5 + 0.5
-		body_color = _COLOR_BODY.lerp(Color.WHITE, pulse * 0.45)
+		body_color = base_color.lerp(Color.WHITE, pulse * 0.45)
 	draw_rect(Rect2(-4.0, -3.0, 8.0, 6.0), body_color)
 
 	# Buster arm: 3 wide × 3 tall protrusion on the facing side. Tints to

@@ -63,6 +63,13 @@ var _hit_flash_timer: float = 0.0
 # ---------------------------------------------------------------------------
 
 func _ready() -> void:
+	# v0.67 — TURBO daily-run modifier: enemies sprint at +50% speed. Set
+	# BEFORE hp init so subclasses overriding _ready can still see it via
+	# super._ready() if they call it. (None currently do — they assign
+	# walk_speed themselves; turbo is applied in their _ready by reading
+	# Game.daily_run_modifier explicitly. Base patrol enemies use this hook.)
+	if Game.daily_run_active and Game.daily_run_modifier == Game.DAILY_MOD_TURBO:
+		walk_speed *= 1.5
 	hp = max_hp
 
 

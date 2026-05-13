@@ -55,10 +55,11 @@ func test_cycle_subweapon_advances_through_list() -> void:
 	Game.cycle_subweapon()
 	assert_ne(Game.equipped_subweapon, start,
 		"cycling should change the equipped weapon")
-	# Cycle again to wrap.
-	Game.cycle_subweapon()
+	# Cycle `size` more times — total `size+1` — should wrap back to start.
+	for i in Game.SUBWEAPON_LIST.size() - 1:
+		Game.cycle_subweapon()
 	assert_eq(Game.equipped_subweapon, start,
-		"two cycles should wrap back to the starting weapon")
+		"cycling SUBWEAPON_LIST.size() times must wrap back to start")
 
 
 func test_subweapon_ready_starts_true() -> void:

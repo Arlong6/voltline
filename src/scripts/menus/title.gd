@@ -28,7 +28,8 @@ const CLEAR_TEXT: String = "GAME CLEAR  -  4: STAGE INFINITY"
 const TRUE_CLEAR_TEXT: String = "TRUE CLEAR  -  5: BOSS RUSH"
 const RUSH_CLEAR_TEXT: String = "RUSH CLEAR  -  6: THE ARCHITECT"
 const ARCHITECT_TEXT: String = "ARCHITECT FELL  -  7: LABYRINTH"
-const LABYRINTH_TEXT: String = "LABYRINTH MAPPED  -  PRESS X"
+const LABYRINTH_TEXT: String = "LABYRINTH MAPPED  -  8: CIRCUIT"
+const CIRCUIT_TEXT:   String = "CIRCUIT BROKEN  -  PRESS X"
 
 const STORY_LINES: Array[String] = [
 	"21XX. THE OUTER GRID HAS FALLEN.",
@@ -71,6 +72,8 @@ const STAGE_LIST: Array = [
 	["boss_rush", "B // BOSS RUSH"],
 	["stage_6",   "6 // ARCHITECT"],
 	["stage_7",   "7 // LABYRINTH"],
+	["stage_8",   "8 // CIRCUIT"],
+	["daily",     "D // DAILY RUN"],
 ]
 
 var _t: float = 0.0
@@ -82,6 +85,9 @@ var _stage_cursor: int = 0
 
 func _ready() -> void:
 	Game.current_area = "title"
+	# v0.67 — clear the daily-run flag when arriving at the title so a
+	# return-to-title from inside a daily run doesn't keep modifiers on.
+	Game.daily_run_active = false
 	# Pull persistent state in from disk every time the title screen
 	# loads — covers the cold-boot case and the "press R to return"
 	# round-trip so the shop UI always shows fresh values.
@@ -131,6 +137,16 @@ func _handle_main_input(event: InputEventKey) -> void:
 		KEY_3:
 			_try_buy(2)
 			return
+		KEY_4:
+			# v0.67 — cycle / buy next skin. Plays a softer buzz if the
+			# advance failed (can't afford, only one skin).
+			var result: String = Game.try_advance_skin()
+			if result == "no_op":
+				Sfx.play("enemy_hit")
+			else:
+				Sfx.play("coin_pickup")
+			queue_redraw()
+			return
 	if event.is_action_pressed("jump") or event.is_action_pressed("shoot"):
 		get_viewport().set_input_as_handled()
 		_transitioning = true
@@ -162,6 +178,16 @@ func _handle_stage_select_input(event: InputEventKey) -> void:
 			return
 		get_viewport().set_input_as_handled()
 		_transitioning = true
+		# v0.67 — DAILY RUN routes through Game.begin_daily_run which
+		# picks today's stage + modifier deterministically.
+		if key == "daily":
+			var tween: Tween = create_tween()
+			tween.tween_property(_fade_rect, "color:a", 1.0, FADE_OUT_DURATION)
+			tween.tween_callback(func() -> void:
+				if is_inside_tree():
+					Game.begin_daily_run()
+			)
+			return
 		Game.reset_run()
 		_fade_out_then_goto(key)
 
@@ -230,20 +256,25 @@ func _draw_main(font: Font) -> void:
 
 	# Coin balance + shop slots.
 	_draw_centered(
-		font, "COINS  x %d" % Game.coins, 124.0, SHOP_FONT_SIZE, COLOR_GOLD
+		font, "COINS  x %d" % Game.coins, 120.0, SHOP_FONT_SIZE, COLOR_GOLD
 	)
-	_draw_shop_line(font, 138.0, "1", "HP UP",
+	_draw_shop_line(font, 134.0, "1", "HP UP",
 		SHOP_HP_COST, Game.upgrade_hp_count, SHOP_HP_MAX)
-	_draw_shop_line(font, 149.0, "2", "DASH UP",
+	_draw_shop_line(font, 145.0, "2", "DASH UP",
 		SHOP_DASH_COST, Game.upgrade_dash_count, SHOP_DASH_MAX)
-	_draw_shop_line(font, 160.0, "3", "FIRE UP",
+	_draw_shop_line(font, 156.0, "3", "FIRE UP",
 		SHOP_SHOOT_COST, Game.upgrade_shoot_count, SHOP_SHOOT_MAX)
+	# v0.67 — skin slot. Press 4 cycles to the next skin, or buys it
+	# (and switches) if unowned.
+	_draw_skin_line(font, 167.0)
 
-	_draw_centered(font, CONTROLS_LINE, 174.0, STORY_FONT_SIZE, COLOR_NEON_DARK)
+	_draw_centered(font, CONTROLS_LINE, 178.0, STORY_FONT_SIZE, COLOR_NEON_DARK)
 
 	var blink: bool = sin(_t * 4.0) > 0.0
 	if blink:
-		if Game.labyrinth_cleared:
+		if Game.circuit_cleared:
+			_draw_centered(font, CIRCUIT_TEXT, 200.0, PROMPT_FONT_SIZE, COLOR_CLEAR)
+		elif Game.labyrinth_cleared:
 			_draw_centered(font, LABYRINTH_TEXT, 200.0, PROMPT_FONT_SIZE, COLOR_CLEAR)
 		elif Game.architect_cleared:
 			_draw_centered(font, ARCHITECT_TEXT, 200.0, PROMPT_FONT_SIZE, COLOR_CLEAR)
@@ -265,9 +296,10 @@ func _draw_stage_select(font: Font) -> void:
 		"STAGE", HORIZONTAL_ALIGNMENT_LEFT, -1, STORY_FONT_SIZE, COLOR_NEON_DARK)
 	draw_string(font, Vector2(190.0, header_y),
 		"SCORE  RANK   TIME", HORIZONTAL_ALIGNMENT_LEFT, -1, STORY_FONT_SIZE, COLOR_NEON_DARK)
-	# Rows.
+	# Rows. Spacing tightens to 11 in v0.67 with 10 entries (stages 1–8
+	# + daily run) — barely fits before the stats footer at y=168.
 	for i in STAGE_LIST.size():
-		var y: float = 52.0 + float(i) * 13.0
+		var y: float = 52.0 + float(i) * 11.0
 		var entry: Array = STAGE_LIST[i]
 		var key: String = String(entry[0])
 		var name: String = String(entry[1])
@@ -284,22 +316,32 @@ func _draw_stage_select(font: Font) -> void:
 			"%s%s" % [prefix, label], HORIZONTAL_ALIGNMENT_LEFT, -1,
 			STORY_FONT_SIZE, color)
 		if unlocked:
-			var score: int = int(Game.best_scores.get(key, 0))
-			var rank: String = "—" if score == 0 else Game.rank_for_score(score)
-			var time: float = float(Game.best_times.get(key, INF))
-			var time_str: String = Game.format_time(time)
-			var stat_text: String = "%5d  %3s   %s" % [score, rank, time_str]
+			var stat_text: String
+			if key == "daily":
+				# Daily row gets a different readout: today's modifier +
+				# best score for today's date (instead of per-stage best).
+				var pick: Dictionary = Game.daily_pick_for(Game.today_iso())
+				var mod_label: String = String(pick["modifier"]).to_upper()
+				var stage_key: String = String(pick["stage"])
+				var today_score: int = int(Game.daily_best_scores.get(Game.today_iso(), 0))
+				stat_text = "%s  %s  best %d" % [stage_key.to_upper(), mod_label, today_score]
+			else:
+				var score: int = int(Game.best_scores.get(key, 0))
+				var rank: String = "—" if score == 0 else Game.rank_for_score(score)
+				var time: float = float(Game.best_times.get(key, INF))
+				var time_str: String = Game.format_time(time)
+				stat_text = "%5d  %3s   %s" % [score, rank, time_str]
 			draw_string(font, Vector2(190.0, y),
 				stat_text, HORIZONTAL_ALIGNMENT_LEFT, -1, STORY_FONT_SIZE, color)
 	# Stats footer.
-	var stats_y: float = 156.0
+	var stats_y: float = 168.0
 	_draw_centered(font,
 		"RUNS %d   COINS %d   SECTORS CLEARED %d/%d" % [
 			Game.total_runs, Game.coins,
-			Game.best_scores.size(), STAGE_LIST.size()
+			Game.best_scores.size(), STAGE_LIST.size() - 1  # exclude DAILY entry
 		],
 		stats_y, STORY_FONT_SIZE, COLOR_FLAVOR)
-	_draw_centered(font, "↑↓ NAVIGATE   X ENTER", 174.0,
+	_draw_centered(font, "↑↓ NAVIGATE   X ENTER", 180.0,
 		STORY_FONT_SIZE, COLOR_NEON_DARK)
 
 
@@ -330,6 +372,41 @@ func _draw_achievements(font: Font) -> void:
 		draw_string(font, Vector2(x + 12.0, y + 9.0),
 			String(entry["description"]),
 			HORIZONTAL_ALIGNMENT_LEFT, -1, STORY_FONT_SIZE - 1, COLOR_NEON_DARK)
+
+
+# Renders the skin slot row. Shows the current skin name in its actual
+# colour, plus a hint about what pressing 4 does next: cycle to an
+# already-owned skin, or buy + switch to the next locked one.
+func _draw_skin_line(font: Font, y: float) -> void:
+	var cur_idx: int = clampi(Game.skin_index, 0, Game.SKIN_COLORS.size() - 1)
+	var cur_name: String = Game.SKIN_NAMES[cur_idx]
+	var cur_color: Color = Game.SKIN_COLORS[cur_idx]
+	var next_idx: int = (cur_idx + 1) % Game.SKIN_COLORS.size()
+	var next_name: String = Game.SKIN_NAMES[next_idx]
+	var hint: String
+	var hint_color: Color
+	if Game.is_skin_owned(next_idx):
+		hint = "next: %s" % next_name
+		hint_color = COLOR_SHOP_OK
+	else:
+		var cost: int = Game.SKIN_COSTS[next_idx]
+		hint = "buy %s  %d coins" % [next_name, cost]
+		hint_color = COLOR_SHOP_OK if Game.coins >= cost else COLOR_SHOP_DIM
+	# Two-tone line: "[4] SKIN <NAME>" in the skin colour, then the hint
+	# in the regular shop colour.
+	var prefix: String = "[4] SKIN  %s   " % cur_name
+	var combined: String = "%s%s" % [prefix, hint]
+	var width: float = font.get_string_size(
+		combined, HORIZONTAL_ALIGNMENT_LEFT, -1, SHOP_FONT_SIZE
+	).x
+	var x: float = (float(VIEWPORT_W) - width) * 0.5
+	draw_string(font, Vector2(x, y), prefix,
+		HORIZONTAL_ALIGNMENT_LEFT, -1, SHOP_FONT_SIZE, cur_color)
+	var prefix_w: float = font.get_string_size(
+		prefix, HORIZONTAL_ALIGNMENT_LEFT, -1, SHOP_FONT_SIZE
+	).x
+	draw_string(font, Vector2(x + prefix_w, y), hint,
+		HORIZONTAL_ALIGNMENT_LEFT, -1, SHOP_FONT_SIZE, hint_color)
 
 
 # Renders one shop slot row. Greys out the price label when the player

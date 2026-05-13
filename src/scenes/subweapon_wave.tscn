@@ -1,0 +1,14 @@
+[gd_scene load_steps=3 format=3 uid="uid://b1voltlinesubwave"]
+
+[ext_resource type="Script" path="res://scripts/subweapon_wave.gd" id="1_subwave"]
+
+[sub_resource type="RectangleShape2D" id="RectShape_subwave"]
+size = Vector2(8, 8)
+
+[node name="SubweaponWave" type="Area2D"]
+collision_layer = 8
+collision_mask = 5
+script = ExtResource("1_subwave")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+shape = SubResource("RectShape_subwave")

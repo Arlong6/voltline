@@ -1,0 +1,14 @@
+[gd_scene load_steps=3 format=3 uid="uid://b1voltlinesubmine"]
+
+[ext_resource type="Script" path="res://scripts/subweapon_mine.gd" id="1_submine"]
+
+[sub_resource type="RectangleShape2D" id="RectShape_submine"]
+size = Vector2(10, 6)
+
+[node name="SubweaponMine" type="Area2D"]
+collision_layer = 8
+collision_mask = 4
+script = ExtResource("1_submine")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+shape = SubResource("RectShape_submine")

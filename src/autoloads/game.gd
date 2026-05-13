@@ -151,21 +151,27 @@ const _BUFF_DURATIONS: Dictionary = {
 
 const SUBWEAPON_MISSILE:   String = "missile"
 const SUBWEAPON_SHOCKWAVE: String = "shockwave"
+const SUBWEAPON_MINE:      String = "mine"
+const SUBWEAPON_WAVE:      String = "wave"
 
 # Declared as `var` because PackedStringArray constructors are not
 # constant expressions in GDScript. Treat as immutable in code.
 var SUBWEAPON_LIST: PackedStringArray = PackedStringArray([
-	SUBWEAPON_MISSILE, SUBWEAPON_SHOCKWAVE,
+	SUBWEAPON_MISSILE, SUBWEAPON_SHOCKWAVE, SUBWEAPON_MINE, SUBWEAPON_WAVE,
 ])
 
 const SUBWEAPON_COOLDOWNS: Dictionary = {
 	SUBWEAPON_MISSILE:   2.0,
 	SUBWEAPON_SHOCKWAVE: 3.5,
+	SUBWEAPON_MINE:      4.0,
+	SUBWEAPON_WAVE:      3.0,
 }
 
 const SUBWEAPON_LABELS: Dictionary = {
 	SUBWEAPON_MISSILE:   "MISSILE",
 	SUBWEAPON_SHOCKWAVE: "SHOCKWAVE",
+	SUBWEAPON_MINE:      "MINE",
+	SUBWEAPON_WAVE:      "WAVE",
 }
 
 ## Currently equipped sub-weapon key. Player cycles via Q. Persisted.
@@ -302,8 +308,98 @@ var boss_rush_cleared: bool = false
 var architect_cleared: bool = false
 
 ## True after the player clears Stage 7 (LABYRINTH) — the multi-room
-## post-architect mission. Final flag in the progression chain.
+## post-architect mission.
 var labyrinth_cleared: bool = false
+
+## True after the player clears Stage 8 (CIRCUIT) — the v0.67 endgame
+## stage that mixes the new hazard + enemy roster around a GRID-0
+## rematch.
+var circuit_cleared: bool = false
+
+# ---------------------------------------------------------------------------
+# Daily Run (v0.67) — seeded by today's date, picks one stage + one
+# modifier. Player must beat that combo for the daily score to count.
+# The flag is cleared on returning to the title screen.
+# ---------------------------------------------------------------------------
+
+## True while the player is inside a Daily Run. Player + Enemy read this
+## (plus daily_run_modifier) on _ready to apply the active modifier.
+var daily_run_active: bool = false
+
+## Active modifier id when daily_run_active. One of DAILY_MOD_* below.
+var daily_run_modifier: String = ""
+
+## Stage key today's daily run selected (one of stage_1..stage_7).
+var daily_run_stage: String = ""
+
+const DAILY_MOD_ONE_SHOT:  String = "one_shot"   # max_hp = 1
+const DAILY_MOD_TURBO:     String = "turbo"      # enemy speed × 1.5
+const DAILY_MOD_SLOW_FIRE: String = "slow_fire"  # player shoot_interval × 2
+
+## Modifier pool the daily picker draws from. Same shape as SUBWEAPON_LIST
+## — declared as var to dodge the const-constructor restriction.
+var DAILY_MOD_LIST: PackedStringArray = PackedStringArray([
+	DAILY_MOD_ONE_SHOT, DAILY_MOD_TURBO, DAILY_MOD_SLOW_FIRE,
+])
+
+const DAILY_STAGE_LIST: Array[String] = [
+	"stage_1", "stage_2", "stage_3", "stage_4",
+	"stage_5", "stage_6", "stage_7",
+]
+
+## Per-date best score for daily runs. Key is "YYYY-MM-DD".
+var daily_best_scores: Dictionary[String, int] = {}
+
+
+## Builds today's date string ("YYYY-MM-DD") from system time. Pulled out
+## as a function so tests can call it without poking Time directly.
+func today_iso() -> String:
+	var d: Dictionary = Time.get_date_dict_from_system()
+	return "%04d-%02d-%02d" % [int(d.year), int(d.month), int(d.day)]
+
+
+## Deterministic daily seed — same calendar day always produces the same
+## stage + modifier pick. Tests can override `iso` to drive specific dates.
+func daily_seed_for(iso: String) -> int:
+	var parts: PackedStringArray = iso.split("-")
+	if parts.size() < 3:
+		return 0
+	return int(parts[0]) * 10000 + int(parts[1]) * 100 + int(parts[2])
+
+
+## Picks (stage_key, modifier) for the given ISO date. Pure function.
+func daily_pick_for(iso: String) -> Dictionary:
+	var seed_val: int = daily_seed_for(iso)
+	var rng: RandomNumberGenerator = RandomNumberGenerator.new()
+	rng.seed = int(seed_val)
+	var stage_idx: int = rng.randi() % DAILY_STAGE_LIST.size()
+	var mod_idx: int = rng.randi() % DAILY_MOD_LIST.size()
+	return {
+		"stage": DAILY_STAGE_LIST[stage_idx],
+		"modifier": String(DAILY_MOD_LIST[mod_idx]),
+	}
+
+
+## Starts a daily run: sets the flags + reset_run, then goto_level.
+## Called by the title screen when the player picks DAILY RUN.
+func begin_daily_run() -> void:
+	var pick: Dictionary = daily_pick_for(today_iso())
+	daily_run_stage = String(pick["stage"])
+	daily_run_modifier = String(pick["modifier"])
+	daily_run_active = true
+	reset_run()
+	goto_level(daily_run_stage)
+
+
+## Records the daily run's score for today's date. Called by register_clear
+## when daily_run_active is true. Returns true on a new daily best.
+func register_daily_clear(score: int) -> bool:
+	var key: String = today_iso()
+	var prev: int = int(daily_best_scores.get(key, 0))
+	if score > prev:
+		daily_best_scores[key] = score
+		return true
+	return false
 
 # ---------------------------------------------------------------------------
 # Cutscene staging — the cutscene scene reads these on _ready.
@@ -322,6 +418,77 @@ var cutscene_next: String = "title"
 ## shop. Saved to disk after every change so a crash mid-run doesn't lose
 ## the player's grind.
 var coins: int = 0
+
+# ---------------------------------------------------------------------------
+# Skins (v0.67) — cosmetic player palettes, bought with persistent coins.
+# Skin 0 is the default and always owned. Higher-index skins cost progressively
+# more. Pressing 4 in the title shop tries to switch to / buy the next skin.
+# ---------------------------------------------------------------------------
+
+## All four skin palettes, ordered by unlock cost. Player._draw reads
+## `SKIN_COLORS[skin_index]` for the body / silhouette tint.
+const SKIN_COLORS: Array[Color] = [
+	Color("#7AC8FF"),  # default — neon cyan
+	Color("#FF6080"),  # crimson
+	Color("#FFD24A"),  # gold
+	Color("#A060FF"),  # plasma violet
+]
+
+# PackedStringArray / PackedInt32Array constructors aren't constant
+# expressions — declared as `var` but treated as immutable.
+static var SKIN_NAMES: PackedStringArray = PackedStringArray([
+	"CYAN", "CRIMSON", "GOLD", "PLASMA",
+])
+
+static var SKIN_COSTS: PackedInt32Array = PackedInt32Array([0, 30, 60, 100])
+
+## Currently selected skin (0..3). Player draws using this index.
+var skin_index: int = 0
+
+## Per-skin ownership flags. Skin 0 is implicit (always owned).
+var skin_owned: Dictionary[int, bool] = {}
+
+
+## True if the player has unlocked this skin index. Index 0 is always
+## considered owned (default skin).
+func is_skin_owned(idx: int) -> bool:
+	if idx == 0:
+		return true
+	return bool(skin_owned.get(idx, false))
+
+
+## Selects the supplied skin index if it's owned. No-op otherwise.
+## Saves to disk so the choice survives a restart.
+func select_skin(idx: int) -> void:
+	if idx < 0 or idx >= SKIN_COLORS.size():
+		return
+	if not is_skin_owned(idx):
+		return
+	skin_index = idx
+	save_to_file()
+
+
+## Try to advance to the next skin. Wraps from the last entry back to 0.
+## If the destination is already owned, switches to it. If not owned and
+## the player can afford it, buys-and-switches. Returns the action taken:
+## "switched" / "bought" / "no_op" — so the title can play a different SFX.
+func try_advance_skin() -> String:
+	var n: int = SKIN_COLORS.size()
+	if n <= 1:
+		return "no_op"
+	var next_idx: int = (skin_index + 1) % n
+	if is_skin_owned(next_idx):
+		skin_index = next_idx
+		save_to_file()
+		return "switched"
+	var cost: int = SKIN_COSTS[next_idx]
+	if coins < cost:
+		return "no_op"
+	coins -= cost
+	skin_owned[next_idx] = true
+	skin_index = next_idx
+	save_to_file()
+	return "bought"
 
 ## Number of times each upgrade has been purchased. Stage spawns apply
 ## these via `apply_upgrades_to(player)` before the player enters the tree.
@@ -445,6 +612,8 @@ func register_clear(stage_key: String) -> bool:
 			unlock_achievement("speedrun")
 	if stage_key == "stage_7":
 		labyrinth_cleared = true
+	if stage_key == "stage_8":
+		circuit_cleared = true
 	var rank: String = rank_for_score(score)
 	if rank == "SSS":
 		unlock_achievement("sss_rank")
@@ -467,6 +636,10 @@ func register_clear(stage_key: String) -> bool:
 	last_clear_coin_bonus = rank_coin_bonus(rank)
 	if last_clear_coin_bonus > 0:
 		add_coin(last_clear_coin_bonus)
+	# v0.67 — daily-run completion logs against today's date independent
+	# of the per-stage best_scores entry.
+	if daily_run_active:
+		register_daily_clear(score)
 	save_to_file()
 	return is_new_best
 
@@ -516,6 +689,11 @@ func is_stage_unlocked(stage_key: String) -> bool:
 			return boss_rush_cleared
 		"stage_7":
 			return architect_cleared
+		"stage_8":
+			return labyrinth_cleared
+		"daily":
+			# Always available — daily run is the "endless" challenge mode.
+			return true
 	return false
 
 
@@ -528,6 +706,13 @@ func apply_upgrades_to(player: Player) -> void:
 		0.05,
 		player.shoot_interval - float(upgrade_shoot_count) * UPGRADE_SHOOT_DELTA
 	)
+	# v0.67 — daily-run modifiers stack on top of regular upgrades.
+	if daily_run_active:
+		match daily_run_modifier:
+			DAILY_MOD_ONE_SHOT:
+				player.max_hp = 1
+			DAILY_MOD_SLOW_FIRE:
+				player.shoot_interval = player.shoot_interval * 2.0
 
 
 ## Persists coins, upgrade counts, and game_cleared status to disk.
@@ -545,6 +730,11 @@ func save_to_file() -> void:
 	cfg.set_value("game", "boss_rush_cleared", boss_rush_cleared)
 	cfg.set_value("game", "architect_cleared", architect_cleared)
 	cfg.set_value("game", "labyrinth_cleared", labyrinth_cleared)
+	cfg.set_value("game", "circuit_cleared", circuit_cleared)
+	var daily_scores: Dictionary = {}
+	for key in daily_best_scores.keys():
+		daily_scores[String(key)] = int(daily_best_scores[key])
+	cfg.set_value("game", "daily_best_scores", daily_scores)
 	# Best scores — flatten the typed dictionary into a plain dict for
 	# ConfigFile (Variant-friendly).
 	var scores: Dictionary = {}
@@ -560,6 +750,11 @@ func save_to_file() -> void:
 	cfg.set_value("settings", "sfx_volume", setting_sfx_volume)
 	cfg.set_value("settings", "music_volume", setting_music_volume)
 	cfg.set_value("loadout", "subweapon", equipped_subweapon)
+	cfg.set_value("loadout", "skin_index", skin_index)
+	var owned: Dictionary = {}
+	for key in skin_owned.keys():
+		owned[int(key)] = bool(skin_owned[key])
+	cfg.set_value("loadout", "skin_owned", owned)
 	# Achievements (v0.65) — flat dict mapping id → bool.
 	var ach: Dictionary = {}
 	for key in achievements.keys():
@@ -587,6 +782,11 @@ func load_from_file() -> void:
 	boss_rush_cleared = cfg.get_value("game", "boss_rush_cleared", false)
 	architect_cleared = cfg.get_value("game", "architect_cleared", false)
 	labyrinth_cleared = cfg.get_value("game", "labyrinth_cleared", false)
+	circuit_cleared = cfg.get_value("game", "circuit_cleared", false)
+	var loaded_daily: Dictionary = cfg.get_value("game", "daily_best_scores", {})
+	daily_best_scores.clear()
+	for key in loaded_daily.keys():
+		daily_best_scores[String(key)] = int(loaded_daily[key])
 	var loaded_scores: Dictionary = cfg.get_value("game", "best_scores", {})
 	best_scores.clear()
 	for key in loaded_scores.keys():
@@ -600,6 +800,11 @@ func load_from_file() -> void:
 	setting_sfx_volume    = float(cfg.get_value("settings", "sfx_volume", 1.0))
 	setting_music_volume  = float(cfg.get_value("settings", "music_volume", 0.7))
 	equipped_subweapon = String(cfg.get_value("loadout", "subweapon", SUBWEAPON_MISSILE))
+	skin_index = int(cfg.get_value("loadout", "skin_index", 0))
+	var loaded_owned: Dictionary = cfg.get_value("loadout", "skin_owned", {})
+	skin_owned.clear()
+	for key in loaded_owned.keys():
+		skin_owned[int(key)] = bool(loaded_owned[key])
 	var loaded_ach: Dictionary = cfg.get_value("achievements", "unlocked", {})
 	achievements.clear()
 	for key in loaded_ach.keys():
@@ -634,6 +839,7 @@ const LEVEL_PATHS: Dictionary[String, String] = {
 	"boss_rush": "res://scenes/levels/boss_rush.tscn",
 	"stage_6":   "res://scenes/levels/stage_6.tscn",
 	"stage_7":   "res://scenes/levels/stage_7.tscn",
+	"stage_8":   "res://scenes/levels/stage_8.tscn",
 	"cutscene":  "res://scenes/cutscene.tscn",
 }
 
