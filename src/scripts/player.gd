@@ -111,6 +111,27 @@ extends CharacterBody2D
 @export var dash_duration: float = 0.233
 
 # ---------------------------------------------------------------------------
+# Tuning — slide / dive (v0.68)
+# ---------------------------------------------------------------------------
+
+## Horizontal velocity during a ground slide (DOWN + DASH on the floor).
+## A touch faster than a regular dash so committing to a slide feels like
+## the offensive choice.
+@export var slide_speed: float = 240.0
+
+## Total slide duration. Roughly 2× the regular dash — the long tail is
+## the part that reads as "low profile" / "commit".
+@export var slide_duration: float = 0.45
+
+## Vertical velocity while diving (DOWN + DASH in the air).
+@export var dive_speed: float = 360.0
+
+## Radius (px) of the dive-landing AOE — every Enemy inside takes
+## `dive_aoe_damage` on touchdown.
+@export var dive_aoe_radius: float = 36.0
+@export var dive_aoe_damage: int = 2
+
+# ---------------------------------------------------------------------------
 # Tuning — wall slide / wall jump (V-005)
 # ---------------------------------------------------------------------------
 
@@ -165,6 +186,19 @@ var did_air_jump_this_tick: bool = false
 # Set true on the tick an air dash fires (same particle-spawn pattern
 # as did_air_jump_this_tick). Visible to tests for direct assertion.
 var did_air_dash_this_tick: bool = false
+
+# v0.68 — slide + dive state.
+## Remaining slide duration. > 0 means the player is in a ground slide
+## (no shooting, dash_speed×, low-profile silhouette).
+var slide_timer: float = 0.0
+
+## True while the player is airborne in a dive (DOWN+DASH in the air).
+## Cleared on touchdown; landing triggers the AOE burst.
+var is_diving: bool = false
+
+# One-shot flag: true on the frame the dive ended (touchdown). Read by
+# _physics_process to spawn the AOE damage burst.
+var did_dive_land_this_tick: bool = false
 
 var _shoot_cooldown: float = 0.0
 var _input_shoot_held_last: bool = false
@@ -270,6 +304,8 @@ func _physics_process(delta: float) -> void:
 		visible = true
 
 	var input_x: float = Input.get_axis("ui_left", "ui_right")
+	# v0.68 — positive = down (slide / dive trigger).
+	var input_y: float = Input.get_axis("ui_up", "ui_down")
 
 	var jump_held: bool = Input.is_action_pressed("jump")
 	var jump_pressed: bool = jump_held and not _input_jump_held_last
@@ -307,7 +343,8 @@ func _physics_process(delta: float) -> void:
 		is_on_floor(),
 		dash_pressed,
 		wall_left,
-		wall_right
+		wall_right,
+		input_y
 	)
 
 	# Rapid-fire buff halves the effective shoot cooldown; tick_shoot
@@ -330,7 +367,29 @@ func _physics_process(delta: float) -> void:
 		_spawn_air_jump_puff()
 	if did_air_dash_this_tick:
 		_spawn_air_dash_puff()
+	if did_dive_land_this_tick:
+		_dive_landing_burst()
 	queue_redraw()
+
+
+# v0.68 — applies the dive AOE on landing. Hits every Enemy within
+# `dive_aoe_radius`, with no directional origin (so Shieldbearer shields
+# don't deflect it). Adds a particle burst + shake + hit-stop for impact.
+func _dive_landing_burst() -> void:
+	var parent: Node = get_parent()
+	if parent == null:
+		return
+	var hits: int = 0
+	for child in parent.get_children():
+		if child is Enemy and child.is_alive:
+			var d2: float = (child.global_position - global_position).length_squared()
+			if d2 <= dive_aoe_radius * dive_aoe_radius:
+				child.take_damage(dive_aoe_damage, Vector2.INF)
+				hits += 1
+	if not Game.test_mode:
+		Game.hit_stop(0.10, 0.04)
+		Game.request_shake(3.5 if hits > 0 else 2.0)
+		Sfx.play("dash")
 
 
 ## Pure-logic movement step. Tests call this directly with synthesized
@@ -349,11 +408,13 @@ func tick_movement(
 	is_grounded: bool,
 	dash_pressed: bool = false,
 	is_wall_left: bool = false,
-	is_wall_right: bool = false
+	is_wall_right: bool = false,
+	input_y: float = 0.0
 ) -> void:
 	# 0. Consume last tick's one-shot flags so the new tick can re-arm them.
 	did_air_jump_this_tick = false
 	did_air_dash_this_tick = false
+	did_dive_land_this_tick = false
 
 	# 1. Decay both lockouts. Either one suspends walk velocity + facing
 	#    updates so the imposed velocity (wall-jump push or knockback)
@@ -369,9 +430,20 @@ func tick_movement(
 		facing = int(signf(input_x))
 
 	# 3. Dash trigger — ground dash always allowed; air dash gated on the
-	#    air-dash charge pool.
-	if dash_pressed and _dash_timer <= 0.0:
-		if is_grounded:
+	#    air-dash charge pool. v0.68: holding DOWN at the moment of the
+	#    press routes into slide (ground) or dive (air) instead of a
+	#    regular dash. Once a slide / dive is in flight we don't re-arm
+	#    until it expires.
+	var pressing_down: bool = input_y > 0.3
+	if dash_pressed and _dash_timer <= 0.0 and slide_timer <= 0.0 and not is_diving:
+		if pressing_down and is_grounded:
+			slide_timer = slide_duration
+			Sfx.play("dash")
+		elif pressing_down and not is_grounded:
+			is_diving = true
+			velocity.y = dive_speed
+			Sfx.play("dash")
+		elif is_grounded:
 			_dash_timer = dash_duration
 			Sfx.play("dash")
 		elif _air_dashes_used < max_air_dashes:
@@ -388,7 +460,13 @@ func tick_movement(
 	#    direction in air keeps the higher boost speed; pressing OPPOSITE
 	#    snaps to walk speed (instant air control); no input preserves vx.
 	if not input_locked_out:
-		if _dash_timer > 0.0:
+		if slide_timer > 0.0:
+			# v0.68 — committed slide along the facing direction.
+			velocity.x = float(facing) * slide_speed
+		elif is_diving:
+			# v0.68 — straight-down dive; no horizontal motion.
+			velocity.x = 0.0
+		elif _dash_timer > 0.0:
 			velocity.x = float(facing) * dash_speed
 		elif is_grounded:
 			velocity.x = input_x * walk_speed
@@ -403,9 +481,12 @@ func tick_movement(
 		# Airborne with no input → preserve velocity.x (no air friction).
 
 	# 5. Gravity, clamped to terminal velocity. Suspended while a dash is
-	#    active so air-dashes ride a flat horizontal line.
+	#    active so air-dashes ride a flat horizontal line. Dive also
+	#    locks velocity.y so the descent stays at dive_speed.
 	if _dash_timer > 0.0:
 		velocity.y = 0.0
+	elif is_diving:
+		velocity.y = dive_speed
 	else:
 		velocity.y = minf(velocity.y + gravity * delta, terminal_velocity)
 
@@ -432,6 +513,11 @@ func tick_movement(
 		_coyote_timer = maxf(_coyote_timer - delta, 0.0)
 	_jump_buffer_timer = maxf(_jump_buffer_timer - delta, 0.0)
 	_dash_timer = maxf(_dash_timer - delta, 0.0)
+	slide_timer = maxf(slide_timer - delta, 0.0)
+	# Dive ends on touchdown — fire the AOE flag exactly once on landing.
+	if is_diving and is_grounded:
+		is_diving = false
+		did_dive_land_this_tick = true
 
 	# 8. Jump trigger — priority order: wall jump → coyote/regular jump →
 	#    air jump → buffer. Air jump only fires when there's no coyote left

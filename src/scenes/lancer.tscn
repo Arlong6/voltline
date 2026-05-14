@@ -1,0 +1,24 @@
+[gd_scene load_steps=4 format=3 uid="uid://b1voltlinelancer"]
+
+[ext_resource type="Script" path="res://scripts/lancer.gd" id="1_lancer"]
+
+[sub_resource type="RectangleShape2D" id="RectShape_lancer_body"]
+size = Vector2(18, 16)
+
+[sub_resource type="RectangleShape2D" id="RectShape_lancer_hurt"]
+size = Vector2(18, 16)
+
+[node name="Lancer" type="CharacterBody2D"]
+collision_layer = 4
+collision_mask = 1
+script = ExtResource("1_lancer")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+shape = SubResource("RectShape_lancer_body")
+
+[node name="HurtBox" type="Area2D" parent="."]
+collision_layer = 0
+collision_mask = 2
+
+[node name="HurtCollider" type="CollisionShape2D" parent="HurtBox"]
+shape = SubResource("RectShape_lancer_hurt")

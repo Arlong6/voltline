@@ -296,6 +296,12 @@ func _build_hud() -> void:
 	coins.size = Vector2(60.0, 12.0)
 	_hud_layer.add_child(coins)
 
+	# v0.68 — speedrun timer (current time vs PB) tucked under the coin counter.
+	var spd_timer: SpeedrunTimer = SpeedrunTimer.new()
+	spd_timer.position = Vector2(VIEWPORT_W - 64.0, 18.0)
+	spd_timer.size = Vector2(60.0, 24.0)
+	_hud_layer.add_child(spd_timer)
+
 	# Active buff strip (v0.64).
 	var buff_hud: BuffHud = BuffHud.new()
 	buff_hud.position = Vector2(8.0, 24.0)

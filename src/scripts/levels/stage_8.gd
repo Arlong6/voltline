@@ -33,6 +33,8 @@ const COLOR_TEXT: Color = Color("#80E0FF")
 const PLAYER_SCENE: PackedScene = preload("res://scenes/player.tscn")
 const SHIELDBEARER_SCENE: PackedScene = preload("res://scenes/shieldbearer.tscn")
 const SPITTER_SCENE: PackedScene = preload("res://scenes/spitter.tscn")
+const STALKER_SCENE: PackedScene = preload("res://scenes/stalker.tscn")
+const LANCER_SCENE: PackedScene = preload("res://scenes/lancer.tscn")
 const CHECKPOINT_SCENE: PackedScene = preload("res://scenes/checkpoint.tscn")
 const LASER_SCENE: PackedScene = preload("res://scenes/laser_beam.tscn")
 const CRUSHER_SCENE: PackedScene = preload("res://scenes/crusher.tscn")
@@ -197,6 +199,12 @@ func _spawn_room_a() -> void:
 	var spitter: Spitter = SPITTER_SCENE.instantiate() as Spitter
 	spitter.position = ROOM_A_SPITTER_POS
 	add_child(spitter)
+	# v0.68 — a Lancer guards the door corner; telegraphs then commits.
+	var lancer: Lancer = LANCER_SCENE.instantiate() as Lancer
+	lancer.position = Vector2(400.0, 168.0)
+	lancer.patrol_min_x = 340.0
+	lancer.patrol_max_x = 430.0
+	add_child(lancer)
 	# Switch on the high wall — must be hit with a charged shot or wave.
 	var switch_panel: SwitchPanel = SWITCH_SCENE.instantiate() as SwitchPanel
 	switch_panel.position = ROOM_A_SWITCH_POS
@@ -242,6 +250,11 @@ func _spawn_room_b() -> void:
 	mp.travel = Vector2(0.0, -28.0)
 	mp.period = 2.6
 	add_child(mp)
+	# v0.68 — a Stalker hovers in Room B harassing the laser-window run.
+	var stalker: Stalker = STALKER_SCENE.instantiate() as Stalker
+	stalker.position = Vector2(700.0, 80.0)
+	stalker.hover_offset_y = -56.0
+	add_child(stalker)
 	# Switch + exit door.
 	var switch_panel: SwitchPanel = SWITCH_SCENE.instantiate() as SwitchPanel
 	switch_panel.position = ROOM_B_SWITCH_POS
@@ -303,6 +316,12 @@ func _build_hud() -> void:
 	coins.position = Vector2(VIEWPORT_W - 64.0, 8.0)
 	coins.size = Vector2(60.0, 12.0)
 	_hud_layer.add_child(coins)
+
+	# v0.68 — speedrun timer (current time vs PB) tucked under the coin counter.
+	var spd_timer: SpeedrunTimer = SpeedrunTimer.new()
+	spd_timer.position = Vector2(VIEWPORT_W - 64.0, 18.0)
+	spd_timer.size = Vector2(60.0, 24.0)
+	_hud_layer.add_child(spd_timer)
 
 	var buff_hud: BuffHud = BuffHud.new()
 	buff_hud.position = Vector2(8.0, 24.0)

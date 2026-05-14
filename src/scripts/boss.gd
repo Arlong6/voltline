@@ -101,6 +101,10 @@ func _spawn_hp_bar() -> void:
 	bar.boss_name = boss_name
 	layer.add_child(bar)
 	parent.add_child(layer)
+	# v0.68 — slam the boss name in as a one-shot intro flourish.
+	var intro: BossIntro = BossIntro.new()
+	intro.boss_name = boss_name
+	parent.add_child(intro)
 
 
 func _physics_process(delta: float) -> void:
