@@ -320,6 +320,9 @@ var circuit_cleared: bool = false
 ## post-Circuit stage and VEIN-K encounter.
 var faultline_cleared: bool = false
 
+## True after the player clears Stage 10 (TERMINUS) and defeats AXIS-Ω.
+var terminus_cleared: bool = false
+
 # ---------------------------------------------------------------------------
 # Daily Run (v0.67) — seeded by today's date, picks one stage + one
 # modifier. Player must beat that combo for the daily score to count.
@@ -333,7 +336,7 @@ var daily_run_active: bool = false
 ## Active modifier id when daily_run_active. One of DAILY_MOD_* below.
 var daily_run_modifier: String = ""
 
-## Stage key today's daily run selected (one of stage_1..stage_9).
+## Stage key today's daily run selected (one of stage_1..stage_10).
 var daily_run_stage: String = ""
 
 const DAILY_MOD_ONE_SHOT:  String = "one_shot"   # max_hp = 1
@@ -348,7 +351,7 @@ var DAILY_MOD_LIST: PackedStringArray = PackedStringArray([
 
 const DAILY_STAGE_LIST: Array[String] = [
 	"stage_1", "stage_2", "stage_3", "stage_4",
-	"stage_5", "stage_6", "stage_7", "stage_8", "stage_9",
+	"stage_5", "stage_6", "stage_7", "stage_8", "stage_9", "stage_10",
 ]
 
 ## Per-date best score for daily runs. Key is "YYYY-MM-DD".
@@ -620,6 +623,8 @@ func register_clear(stage_key: String) -> bool:
 		circuit_cleared = true
 	if stage_key == "stage_9":
 		faultline_cleared = true
+	if stage_key == "stage_10":
+		terminus_cleared = true
 	var rank: String = rank_for_score(score)
 	if rank == "SSS":
 		unlock_achievement("sss_rank")
@@ -656,6 +661,8 @@ func register_clear(stage_key: String) -> bool:
 func format_score_summary(is_new_best: bool) -> String:
 	var score: int = compute_score()
 	var rank: String = rank_for_score(score)
+	if current_area == "stage_10":
+		rank = "TRUE END"
 	var tag: String = "  NEW BEST" if is_new_best else ""
 	var bonus_line: String = ""
 	if last_clear_coin_bonus > 0:
@@ -699,6 +706,8 @@ func is_stage_unlocked(stage_key: String) -> bool:
 			return labyrinth_cleared
 		"stage_9":
 			return circuit_cleared
+		"stage_10":
+			return faultline_cleared
 		"daily":
 			# Always available — daily run is the "endless" challenge mode.
 			return true
@@ -740,6 +749,7 @@ func save_to_file() -> void:
 	cfg.set_value("game", "labyrinth_cleared", labyrinth_cleared)
 	cfg.set_value("game", "circuit_cleared", circuit_cleared)
 	cfg.set_value("game", "faultline_cleared", faultline_cleared)
+	cfg.set_value("game", "terminus_cleared", terminus_cleared)
 	var daily_scores: Dictionary = {}
 	for key in daily_best_scores.keys():
 		daily_scores[String(key)] = int(daily_best_scores[key])
@@ -793,6 +803,7 @@ func load_from_file() -> void:
 	labyrinth_cleared = cfg.get_value("game", "labyrinth_cleared", false)
 	circuit_cleared = cfg.get_value("game", "circuit_cleared", false)
 	faultline_cleared = cfg.get_value("game", "faultline_cleared", false)
+	terminus_cleared = cfg.get_value("game", "terminus_cleared", false)
 	var loaded_daily: Dictionary = cfg.get_value("game", "daily_best_scores", {})
 	daily_best_scores.clear()
 	for key in loaded_daily.keys():
@@ -851,6 +862,7 @@ const LEVEL_PATHS: Dictionary[String, String] = {
 	"stage_7":   "res://scenes/levels/stage_7.tscn",
 	"stage_8":   "res://scenes/levels/stage_8.tscn",
 	"stage_9":   "res://scenes/levels/stage_9.tscn",
+	"stage_10":  "res://scenes/levels/stage_10.tscn",
 	"cutscene":  "res://scenes/cutscene.tscn",
 }
 

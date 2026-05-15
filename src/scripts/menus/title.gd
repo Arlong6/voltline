@@ -31,6 +31,7 @@ const ARCHITECT_TEXT: String = "ARCHITECT FELL  -  7: LABYRINTH"
 const LABYRINTH_TEXT: String = "LABYRINTH MAPPED  -  8: CIRCUIT"
 const CIRCUIT_TEXT:   String = "CIRCUIT BROKEN  -  9: FAULTLINE"
 const FAULTLINE_TEXT: String = "FAULTLINE SEALED  -  PRESS X"
+const TERMINUS_TEXT: String = "✓ TRUE END  -  PRESS X"
 
 const STORY_LINES: Array[String] = [
 	"21XX. THE OUTER GRID HAS FALLEN.",
@@ -75,12 +76,14 @@ const STAGE_LIST: Array = [
 	["stage_7",   "7 // LABYRINTH"],
 	["stage_8",   "8 // CIRCUIT"],
 	["stage_9",   "9 // FAULTLINE"],
+	["stage_10",  "10 // TERMINUS"],
 	["daily",     "D // DAILY RUN"],
 ]
 
 const STAGE_CLEAR_MARK: String = "✓"
-const STAGE_ROW_START_Y: float = 50.0
-const STAGE_ROW_GAP: float = 10.0
+const STAGE_TRUE_END_MARK: String = "✓ TRUE END"
+const STAGE_ROW_START_Y: float = 48.0
+const STAGE_ROW_GAP: float = 9.0
 
 var _t: float = 0.0
 var _fade_rect: ColorRect
@@ -288,7 +291,9 @@ func _draw_main(font: Font) -> void:
 
 	var blink: bool = sin(_t * 4.0) > 0.0
 	if blink:
-		if Game.faultline_cleared:
+		if Game.terminus_cleared:
+			_draw_centered(font, TERMINUS_TEXT, 200.0, PROMPT_FONT_SIZE, COLOR_CLEAR)
+		elif Game.faultline_cleared:
 			_draw_centered(font, FAULTLINE_TEXT, 200.0, PROMPT_FONT_SIZE, COLOR_CLEAR)
 		elif Game.circuit_cleared:
 			_draw_centered(font, CIRCUIT_TEXT, 200.0, PROMPT_FONT_SIZE, COLOR_CLEAR)
@@ -329,7 +334,11 @@ func _draw_stage_select(font: Font) -> void:
 		elif selected:
 			color = COLOR_GOLD
 		var prefix: String = "> " if selected else "  "
-		var clear_mark: String = " %s" % STAGE_CLEAR_MARK if _is_stage_cleared(key) else ""
+		var clear_mark: String = ""
+		if key == "stage_10" and Game.terminus_cleared:
+			clear_mark = " %s" % STAGE_TRUE_END_MARK
+		elif _is_stage_cleared(key):
+			clear_mark = " %s" % STAGE_CLEAR_MARK
 		var label: String = "%s%s" % [name, clear_mark] if unlocked else "%s  [LOCKED]" % name
 		draw_string(font, Vector2(20.0, y),
 			"%s%s" % [prefix, label], HORIZONTAL_ALIGNMENT_LEFT, -1,
@@ -408,6 +417,7 @@ func _dev_unlock_all() -> void:
 	Game.labyrinth_cleared = true
 	Game.circuit_cleared = true
 	Game.faultline_cleared = true
+	Game.terminus_cleared = true
 	Game.save_to_file()
 
 
@@ -427,6 +437,8 @@ func _is_stage_cleared(key: String) -> bool:
 			return Game.circuit_cleared
 		"stage_9":
 			return Game.faultline_cleared
+		"stage_10":
+			return Game.terminus_cleared
 		"daily":
 			return false
 		_:
