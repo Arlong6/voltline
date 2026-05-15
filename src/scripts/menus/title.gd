@@ -29,7 +29,8 @@ const TRUE_CLEAR_TEXT: String = "TRUE CLEAR  -  5: BOSS RUSH"
 const RUSH_CLEAR_TEXT: String = "RUSH CLEAR  -  6: THE ARCHITECT"
 const ARCHITECT_TEXT: String = "ARCHITECT FELL  -  7: LABYRINTH"
 const LABYRINTH_TEXT: String = "LABYRINTH MAPPED  -  8: CIRCUIT"
-const CIRCUIT_TEXT:   String = "CIRCUIT BROKEN  -  PRESS X"
+const CIRCUIT_TEXT:   String = "CIRCUIT BROKEN  -  9: FAULTLINE"
+const FAULTLINE_TEXT: String = "FAULTLINE SEALED  -  PRESS X"
 
 const STORY_LINES: Array[String] = [
 	"21XX. THE OUTER GRID HAS FALLEN.",
@@ -73,8 +74,13 @@ const STAGE_LIST: Array = [
 	["stage_6",   "6 // ARCHITECT"],
 	["stage_7",   "7 // LABYRINTH"],
 	["stage_8",   "8 // CIRCUIT"],
+	["stage_9",   "9 // FAULTLINE"],
 	["daily",     "D // DAILY RUN"],
 ]
+
+const STAGE_CLEAR_MARK: String = "✓"
+const STAGE_ROW_START_Y: float = 50.0
+const STAGE_ROW_GAP: float = 10.0
 
 var _t: float = 0.0
 var _fade_rect: ColorRect
@@ -282,7 +288,9 @@ func _draw_main(font: Font) -> void:
 
 	var blink: bool = sin(_t * 4.0) > 0.0
 	if blink:
-		if Game.circuit_cleared:
+		if Game.faultline_cleared:
+			_draw_centered(font, FAULTLINE_TEXT, 200.0, PROMPT_FONT_SIZE, COLOR_CLEAR)
+		elif Game.circuit_cleared:
 			_draw_centered(font, CIRCUIT_TEXT, 200.0, PROMPT_FONT_SIZE, COLOR_CLEAR)
 		elif Game.labyrinth_cleared:
 			_draw_centered(font, LABYRINTH_TEXT, 200.0, PROMPT_FONT_SIZE, COLOR_CLEAR)
@@ -306,10 +314,10 @@ func _draw_stage_select(font: Font) -> void:
 		"STAGE", HORIZONTAL_ALIGNMENT_LEFT, -1, STORY_FONT_SIZE, COLOR_NEON_DARK)
 	draw_string(font, Vector2(190.0, header_y),
 		"SCORE  RANK   TIME", HORIZONTAL_ALIGNMENT_LEFT, -1, STORY_FONT_SIZE, COLOR_NEON_DARK)
-	# Rows. Spacing tightens to 11 in v0.67 with 10 entries (stages 1–8
-	# + daily run) — barely fits before the stats footer at y=168.
+	# Rows. Spacing is tight with 11 entries (stages 1–9 + boss rush +
+	# daily run) so the footer still has a readable lane.
 	for i in STAGE_LIST.size():
-		var y: float = 52.0 + float(i) * 11.0
+		var y: float = STAGE_ROW_START_Y + float(i) * STAGE_ROW_GAP
 		var entry: Array = STAGE_LIST[i]
 		var key: String = String(entry[0])
 		var name: String = String(entry[1])
@@ -321,7 +329,8 @@ func _draw_stage_select(font: Font) -> void:
 		elif selected:
 			color = COLOR_GOLD
 		var prefix: String = "> " if selected else "  "
-		var label: String = name if unlocked else "%s  [LOCKED]" % name
+		var clear_mark: String = " %s" % STAGE_CLEAR_MARK if _is_stage_cleared(key) else ""
+		var label: String = "%s%s" % [name, clear_mark] if unlocked else "%s  [LOCKED]" % name
 		draw_string(font, Vector2(20.0, y),
 			"%s%s" % [prefix, label], HORIZONTAL_ALIGNMENT_LEFT, -1,
 			STORY_FONT_SIZE, color)
@@ -398,7 +407,30 @@ func _dev_unlock_all() -> void:
 	Game.architect_cleared = true
 	Game.labyrinth_cleared = true
 	Game.circuit_cleared = true
+	Game.faultline_cleared = true
 	Game.save_to_file()
+
+
+func _is_stage_cleared(key: String) -> bool:
+	match key:
+		"stage_4":
+			return Game.game_cleared
+		"stage_5":
+			return Game.true_cleared
+		"boss_rush":
+			return Game.boss_rush_cleared
+		"stage_6":
+			return Game.architect_cleared
+		"stage_7":
+			return Game.labyrinth_cleared
+		"stage_8":
+			return Game.circuit_cleared
+		"stage_9":
+			return Game.faultline_cleared
+		"daily":
+			return false
+		_:
+			return int(Game.best_scores.get(key, 0)) > 0
 
 
 # Renders the skin slot row. Shows the current skin name in its actual
