@@ -413,6 +413,6 @@ func _return_to_title() -> void:
 	if not is_inside_tree():
 		return
 	if Game.story_mode:
-		Game.play_cutscene("// SYSTEM RESTORED", Game.OUTRO_LINES, TITLE_LEVEL)
+		Game.play_cutscene("// SYSTEM RESTORED", Game.OUTRO_LINES, "credits")
 	else:
 		Game.return_to_base_or_title(STAGE_KEY, true)

@@ -476,9 +476,14 @@ const INTRO_LINES: PackedStringArray = [
 
 const OUTRO_LINES: PackedStringArray = [
 	"AXIS-Ω 已斷線。",
+	"// AKI: 系統核心穩定，所有 sector 連線恢復。",
+	"// ECHO: 我已經把整個事件記錄到主檔案。",
+	"// NIX: 你的硬體還能撐下一輪嗎？",
 	"主控權回到核心程序。",
-	"7 個 sector 重新可用。",
+	"7 個 sector 重新可用，網路再撐 30 天。",
 	"你完成了任務。",
+	"",
+	"// 但 AXIS-Ω 留下的紀錄裡，還有一些東西。",
 	"// END OF LINE",
 ]
 
@@ -991,6 +996,7 @@ const LEVEL_PATHS: Dictionary[String, String] = {
 	"cutscene":  "res://scenes/cutscene.tscn",
 	"skin_shop": "res://scenes/skin_shop.tscn",
 	"how_to_play": "res://scenes/how_to_play.tscn",
+	"credits": "res://scenes/credits.tscn",
 }
 
 
