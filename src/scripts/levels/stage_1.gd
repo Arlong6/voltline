@@ -364,16 +364,7 @@ func _fade_out_to_stage_2() -> void:
 func _advance_to_stage_2() -> void:
 	if not is_inside_tree():
 		return
-	Game.play_cutscene(
-		"// JUNKYARD CLEARED",
-		PackedStringArray([
-			"SECTOR 1 SECURED. SCRAP-BOTS NEUTRALISED.",
-			"GRID INTEGRITY: 24%. THE SUBLEVEL HOLDS.",
-			"SENTINEL R-08 BLOCKS THE GREEN CORRIDOR.",
-			"DESCEND. BURN A PATH THROUGH.",
-		]),
-		"stage_2"
-	)
+	Game.return_to_base_or_title("stage_1", true)
 
 
 # Draws a short hint line in the top-left of the world (scrolls with camera).

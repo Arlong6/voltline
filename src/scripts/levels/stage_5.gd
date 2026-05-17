@@ -417,4 +417,4 @@ func _fade_out_to_title() -> void:
 func _return_to_title() -> void:
 	if not is_inside_tree():
 		return
-	Game.goto_level("title")
+	Game.return_to_base_or_title("stage_5", true)

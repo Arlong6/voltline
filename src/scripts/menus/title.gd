@@ -40,6 +40,8 @@ const STORY_LINES: Array[String] = [
 	"TO REACH THE CORE: TYRANT-Z.",
 ]
 const CONTROLS_LINE: String = "ARROWS/WASD MOVE   X JUMP   C SHOOT   Z DASH"
+const STORY_MODE_START_TEXT: String = "[5] STORY MODE — START"
+const STORY_MODE_CONTINUE_TEXT: String = "[5] STORY MODE — CONTINUE"
 
 const TITLE_FONT_SIZE: int = 36
 const SUBTITLE_FONT_SIZE: int = 14
@@ -166,9 +168,18 @@ func _handle_main_input(event: InputEventKey) -> void:
 				Sfx.play("coin_pickup")
 			queue_redraw()
 			return
+		KEY_5:
+			get_viewport().set_input_as_handled()
+			_transitioning = true
+			if Game.story_progress > 0:
+				_fade_out_then_goto("base")
+			else:
+				_fade_out_then_start_story_mode()
+			return
 	if event.is_action_pressed("jump") or event.is_action_pressed("shoot"):
 		get_viewport().set_input_as_handled()
 		_transitioning = true
+		Game.story_mode = false
 		Game.reset_run()
 		# Fresh runs play the intro cutscene before stage_1; returning
 		# players who have already beaten the game can skip straight in.
@@ -200,6 +211,7 @@ func _handle_stage_select_input(event: InputEventKey) -> void:
 		# v0.67 — DAILY RUN routes through Game.begin_daily_run which
 		# picks today's stage + modifier deterministically.
 		if key == "daily":
+			Game.story_mode = false
 			var tween: Tween = create_tween()
 			tween.tween_property(_fade_rect, "color:a", 1.0, FADE_OUT_DURATION)
 			tween.tween_callback(func() -> void:
@@ -207,6 +219,7 @@ func _handle_stage_select_input(event: InputEventKey) -> void:
 					Game.begin_daily_run()
 			)
 			return
+		Game.story_mode = false
 		Game.reset_run()
 		_fade_out_then_goto(key)
 
@@ -261,7 +274,8 @@ func _draw() -> void:
 		PAGE_STAGES:       hint = "TAB: ACHIEVEMENTS"
 		PAGE_ACHIEVEMENTS: hint = "TAB: BACK"
 		_:                 hint = ""
-	_draw_centered(font, hint, 188.0, STORY_FONT_SIZE, COLOR_NEON_DARK)
+	var hint_y: float = 68.0 if _page == PAGE_MAIN else 188.0
+	_draw_centered(font, hint, hint_y, STORY_FONT_SIZE, COLOR_NEON_DARK)
 
 
 func _draw_main(font: Font) -> void:
@@ -287,28 +301,30 @@ func _draw_main(font: Font) -> void:
 	# (and switches) if unowned.
 	_draw_skin_line(font, 167.0)
 
-	_draw_centered(font, CONTROLS_LINE, 178.0, STORY_FONT_SIZE, COLOR_NEON_DARK)
+	_draw_centered(font, CONTROLS_LINE, 177.0, STORY_FONT_SIZE, COLOR_NEON_DARK)
+	var story_label: String = STORY_MODE_CONTINUE_TEXT if Game.story_progress > 0 else STORY_MODE_START_TEXT
+	_draw_centered(font, story_label, 189.0, STORY_FONT_SIZE, COLOR_GOLD)
 
 	var blink: bool = sin(_t * 4.0) > 0.0
 	if blink:
 		if Game.terminus_cleared:
-			_draw_centered(font, TERMINUS_TEXT, 200.0, PROMPT_FONT_SIZE, COLOR_CLEAR)
+			_draw_centered(font, TERMINUS_TEXT, 204.0, PROMPT_FONT_SIZE, COLOR_CLEAR)
 		elif Game.faultline_cleared:
-			_draw_centered(font, FAULTLINE_TEXT, 200.0, PROMPT_FONT_SIZE, COLOR_CLEAR)
+			_draw_centered(font, FAULTLINE_TEXT, 204.0, PROMPT_FONT_SIZE, COLOR_CLEAR)
 		elif Game.circuit_cleared:
-			_draw_centered(font, CIRCUIT_TEXT, 200.0, PROMPT_FONT_SIZE, COLOR_CLEAR)
+			_draw_centered(font, CIRCUIT_TEXT, 204.0, PROMPT_FONT_SIZE, COLOR_CLEAR)
 		elif Game.labyrinth_cleared:
-			_draw_centered(font, LABYRINTH_TEXT, 200.0, PROMPT_FONT_SIZE, COLOR_CLEAR)
+			_draw_centered(font, LABYRINTH_TEXT, 204.0, PROMPT_FONT_SIZE, COLOR_CLEAR)
 		elif Game.architect_cleared:
-			_draw_centered(font, ARCHITECT_TEXT, 200.0, PROMPT_FONT_SIZE, COLOR_CLEAR)
+			_draw_centered(font, ARCHITECT_TEXT, 204.0, PROMPT_FONT_SIZE, COLOR_CLEAR)
 		elif Game.boss_rush_cleared:
-			_draw_centered(font, RUSH_CLEAR_TEXT, 200.0, PROMPT_FONT_SIZE, COLOR_CLEAR)
+			_draw_centered(font, RUSH_CLEAR_TEXT, 204.0, PROMPT_FONT_SIZE, COLOR_CLEAR)
 		elif Game.true_cleared:
-			_draw_centered(font, TRUE_CLEAR_TEXT, 200.0, PROMPT_FONT_SIZE, COLOR_CLEAR)
+			_draw_centered(font, TRUE_CLEAR_TEXT, 204.0, PROMPT_FONT_SIZE, COLOR_CLEAR)
 		elif Game.game_cleared:
-			_draw_centered(font, CLEAR_TEXT, 200.0, PROMPT_FONT_SIZE, COLOR_CLEAR)
+			_draw_centered(font, CLEAR_TEXT, 204.0, PROMPT_FONT_SIZE, COLOR_CLEAR)
 		else:
-			_draw_centered(font, PROMPT_TEXT, 200.0, PROMPT_FONT_SIZE, COLOR_PROMPT)
+			_draw_centered(font, PROMPT_TEXT, 204.0, PROMPT_FONT_SIZE, COLOR_PROMPT)
 
 
 func _draw_stage_select(font: Font) -> void:
@@ -554,4 +570,13 @@ func _fade_out_then_play_intro() -> void:
 			]),
 			"stage_1"
 		)
+	)
+
+
+func _fade_out_then_start_story_mode() -> void:
+	var tween: Tween = create_tween()
+	tween.tween_property(_fade_rect, "color:a", 1.0, FADE_OUT_DURATION)
+	tween.tween_callback(func() -> void:
+		if is_inside_tree():
+			Game.start_story_mode()
 	)

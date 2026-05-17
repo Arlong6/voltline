@@ -414,4 +414,7 @@ func _fade_out_to_title() -> void:
 func _return_to_title() -> void:
 	if not is_inside_tree():
 		return
-	Game.goto_level(TITLE_LEVEL)
+	if Game.story_mode:
+		Game.play_cutscene("// SYSTEM RESTORED", Game.OUTRO_LINES, TITLE_LEVEL)
+	else:
+		Game.return_to_base_or_title(STAGE_KEY, true)

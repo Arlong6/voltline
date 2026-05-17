@@ -358,13 +358,4 @@ func _fade_out_to_stage_3() -> void:
 func _advance_to_stage_3() -> void:
 	if not is_inside_tree():
 		return
-	Game.play_cutscene(
-		"// R-08 OFFLINE",
-		PackedStringArray([
-			"SENTINEL R-08 — FRAGMENTED.",
-			"SUBLEVEL ACCESS GRANTED.",
-			"OMEGA-X PATROLS THE SKYBRIDGE ARC.",
-			"PUSH UPWARD. THE LIGHT IS THIN HERE.",
-		]),
-		"stage_3"
-	)
+	Game.return_to_base_or_title("stage_2", true)

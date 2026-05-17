@@ -390,13 +390,4 @@ func _fade_out_to_stage_4() -> void:
 func _advance_to_stage_4() -> void:
 	if not is_inside_tree():
 		return
-	Game.play_cutscene(
-		"// OMEGA-X SILENCED",
-		PackedStringArray([
-			"SKYBRIDGE BURNING. OMEGA-X SCATTERED.",
-			"BELOW US: THE CORE. ALL SIGNALS DARK.",
-			"TYRANT-Z RULES THE LIGHT IN THERE.",
-			"DESCEND. END THIS.",
-		]),
-		"stage_4"
-	)
+	Game.return_to_base_or_title("stage_3", true)

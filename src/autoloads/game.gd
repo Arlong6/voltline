@@ -21,6 +21,9 @@ var current_area: String = ""
 ## tests stay deterministic.
 var test_mode: bool = false
 
+## Last logical route requested while test_mode is true.
+var _last_goto_target: String = ""
+
 ## Seconds the player has spent in a stage since the last reset_run().
 var session_time: float = 0.0
 
@@ -51,6 +54,15 @@ var total_runs: int = 0
 ## Lifetime count of DestructibleWall instances destroyed across all
 ## runs. Drives the TREASURE_HUNTER achievement.
 var walls_broken: int = 0
+
+## True while the player is in the hub-driven story flow.
+var story_mode: bool = false
+
+## Highest numbered story sector cleared. 0 means a fresh story run.
+var story_progress: int = 0
+
+## NPC ids the player has spoken to during the story run.
+var npcs_seen: PackedStringArray = PackedStringArray()
 
 # ---------------------------------------------------------------------------
 # Achievements (v0.65) — see ACHIEVEMENT_DEFS for the full table.
@@ -421,6 +433,22 @@ var cutscene_lines: PackedStringArray = PackedStringArray()
 ## Logical scene key the cutscene routes to after the last line.
 var cutscene_next: String = "title"
 
+const INTRO_LINES: PackedStringArray = [
+	"[T-00:00] 主系統失去連線。",
+	"[T-00:14] 7 個 sector 全數失控。",
+	"[T-00:31] 仍在跑的 process: 1",
+	"[T-00:31] 重新啟動防護程序...",
+	"[T-00:32] >> 你，開始執行。",
+]
+
+const OUTRO_LINES: PackedStringArray = [
+	"AXIS-Ω 已斷線。",
+	"主控權回到核心程序。",
+	"7 個 sector 重新可用。",
+	"你完成了任務。",
+	"// END OF LINE",
+]
+
 ## Coins persisted across all sessions — currency for the title-screen
 ## shop. Saved to disk after every change so a crash mid-run doesn't lose
 ## the player's grind.
@@ -625,6 +653,10 @@ func register_clear(stage_key: String) -> bool:
 		faultline_cleared = true
 	if stage_key == "stage_10":
 		terminus_cleared = true
+	if story_mode:
+		var stage_num: int = _stage_number(stage_key)
+		if stage_num > story_progress:
+			story_progress = stage_num
 	var rank: String = rank_for_score(score)
 	if rank == "SSS":
 		unlock_achievement("sss_rank")
@@ -852,6 +884,7 @@ func apply_audio_settings() -> void:
 
 const LEVEL_PATHS: Dictionary[String, String] = {
 	"title":   "res://scenes/menus/title.tscn",
+	"base":    "res://scenes/base.tscn",
 	"stage_1": "res://scenes/levels/stage_1.tscn",
 	"stage_2": "res://scenes/levels/stage_2.tscn",
 	"stage_3": "res://scenes/levels/stage_3.tscn",
@@ -865,6 +898,32 @@ const LEVEL_PATHS: Dictionary[String, String] = {
 	"stage_10":  "res://scenes/levels/stage_10.tscn",
 	"cutscene":  "res://scenes/cutscene.tscn",
 }
+
+
+func _stage_number(stage_key: String) -> int:
+	if not stage_key.begins_with("stage_"):
+		return 0
+	return int(stage_key.trim_prefix("stage_"))
+
+
+## Starts story mode: sets flag, plays intro cutscene, routes to base.
+func start_story_mode() -> void:
+	story_mode = true
+	play_cutscene("// VOLTLINE — SYSTEM LOG", INTRO_LINES, "base")
+
+
+## After stage clear: routes to base if story mode, else title.
+## Set already_registered when a stage has already called register_clear()
+## for its score banner before the delayed route.
+func return_to_base_or_title(stage_key: String, already_registered: bool = false) -> bool:
+	var is_new_best: bool = false
+	if not already_registered:
+		is_new_best = register_clear(stage_key)
+	if story_mode:
+		goto_level("base")
+	else:
+		goto_level("title")
+	return is_new_best
 
 
 ## Convenience: stash the cutscene payload and route to it. The cutscene
@@ -882,6 +941,9 @@ func play_cutscene(title: String, lines: PackedStringArray, next: String) -> voi
 func goto_level(key: String) -> void:
 	if not LEVEL_PATHS.has(key):
 		push_warning("goto_level: unknown key '%s'" % key)
+		return
+	if test_mode:
+		_last_goto_target = key
 		return
 	get_tree().change_scene_to_file(LEVEL_PATHS[key])
 
