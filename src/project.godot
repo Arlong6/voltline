@@ -32,6 +32,10 @@ window/stretch/scale_mode="integer"
 
 enabled=PackedStringArray("res://addons/gut/plugin.cfg")
 
+[gui]
+
+theme/custom_font="res://assets/fonts/jf-openhuninn-2.1.ttf"
+
 [input]
 
 ui_left={
