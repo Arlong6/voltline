@@ -39,7 +39,7 @@ const STORY_LINES: Array[String] = [
 	"COMBAT UNIT THROUGH FOUR SECTORS",
 	"TO REACH THE CORE: TYRANT-Z.",
 ]
-const CONTROLS_LINE: String = "ARROWS/WASD MOVE   X JUMP   C SHOOT   Z DASH"
+const CONTROLS_LINE: String = "[7] HOW TO PLAY — FULL CONTROLS"
 const STORY_MODE_START_TEXT: String = "[5] STORY MODE — START"
 const STORY_MODE_CONTINUE_TEXT: String = "[5] STORY MODE — CONTINUE"
 const NG_PLUS_START_TEXT: String = "NG+ MODE — START"
@@ -186,6 +186,11 @@ func _handle_main_input(event: InputEventKey) -> void:
 			get_viewport().set_input_as_handled()
 			_transitioning = true
 			_fade_out_then_start_ng_plus()
+			return
+		KEY_7:
+			get_viewport().set_input_as_handled()
+			_transitioning = true
+			_fade_out_then_goto("how_to_play")
 			return
 	if event.is_action_pressed("jump") or event.is_action_pressed("shoot"):
 		get_viewport().set_input_as_handled()

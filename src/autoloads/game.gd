@@ -990,6 +990,7 @@ const LEVEL_PATHS: Dictionary[String, String] = {
 	"stage_10":  "res://scenes/levels/stage_10.tscn",
 	"cutscene":  "res://scenes/cutscene.tscn",
 	"skin_shop": "res://scenes/skin_shop.tscn",
+	"how_to_play": "res://scenes/how_to_play.tscn",
 }
 
 
