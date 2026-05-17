@@ -47,10 +47,15 @@ func test_interaction_zone_detects_nearby_npc() -> void:
 		"standing near AKI should make AKI the active NPC interaction")
 
 
-func test_terminal_locked_blocks_goto() -> void:
-	base.interact_with_terminal(9)
+func test_unknown_terminal_index_is_ignored() -> void:
+	# v0.80.2 — every legitimate sector is unlocked, but bogus indices
+	# (e.g. 0, 11) still must not crash or route anywhere.
+	base.interact_with_terminal(0)
 	assert_eq(Game._last_goto_target, "",
-		"locked terminal should not route to a stage")
+		"terminal index 0 is out of range and must not route")
+	base.interact_with_terminal(11)
+	assert_eq(Game._last_goto_target, "",
+		"terminal index 11 is out of range and must not route")
 
 
 func test_terminal_unlocked_routes_to_stage() -> void:

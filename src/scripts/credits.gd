@@ -63,7 +63,7 @@ const CREDITS: Array[Array] = [
 	["dim",     "R-08 · OMEGA-X"],
 	["dim",     "TYRANT-Z · TYRANT-Z²"],
 	["dim",     "GRID-0 · VEIN-K"],
-	["dim",     "AXIS-Ω"],
+	["dim",     "AXIS-OMEGA"],
 	["spacer",  ""],
 	["body",    "THE PROCESS THAT REMAINED"],
 	["spacer",  ""],

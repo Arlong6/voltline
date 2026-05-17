@@ -760,34 +760,12 @@ func format_time(seconds: float) -> String:
 ## stage-select panel + KEY hot-keys to gate access. Stage 1 is always
 ## free; subsequent stages each require the previous stage's clear or
 ## an equivalent flag.
-func is_stage_unlocked(stage_key: String) -> bool:
-	match stage_key:
-		"stage_1":
-			return true
-		"stage_2":
-			return best_scores.has("stage_1")
-		"stage_3":
-			return best_scores.has("stage_2")
-		"stage_4":
-			return best_scores.has("stage_3")
-		"stage_5":
-			return game_cleared
-		"boss_rush":
-			return true_cleared
-		"stage_6":
-			return boss_rush_cleared
-		"stage_7":
-			return architect_cleared
-		"stage_8":
-			return labyrinth_cleared
-		"stage_9":
-			return circuit_cleared
-		"stage_10":
-			return faultline_cleared
-		"daily":
-			# Always available — daily run is the "endless" challenge mode.
-			return true
-	return false
+func is_stage_unlocked(_stage_key: String) -> bool:
+	# v0.80.2 — Web demo: every stage unlocked from the title's Stage
+	# Select. Beating the campaign in order still records clears for
+	# NG+/best-time tracking, but a first-time visitor can jump straight
+	# into any sector to sample the boss they want.
+	return true
 
 
 ## Applies hard-mode multipliers to a freshly-spawned enemy. No-op when

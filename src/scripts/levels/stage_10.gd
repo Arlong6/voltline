@@ -96,7 +96,7 @@ const BOUNDS: Array[Rect2] = [
 
 const STAGE_NAME: String = "SECTOR 10 // TERMINUS"
 const STAGE_CLEAR_TEXT: String = "TERMINUS — TRUE END"
-const BOSS_NAME_TEXT: String = "AXIS-Ω"
+const BOSS_NAME_TEXT: String = "AXIS-OMEGA"
 const ROOM_A_LABEL: String = "A · DESCENT"
 const ROOM_B_LABEL: String = "B · GAUNTLET"
 const ROOM_C_LABEL: String = "C · THRESHOLD"

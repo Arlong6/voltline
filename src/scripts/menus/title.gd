@@ -31,7 +31,7 @@ const ARCHITECT_TEXT: String = "ARCHITECT FELL  -  7: LABYRINTH"
 const LABYRINTH_TEXT: String = "LABYRINTH MAPPED  -  8: CIRCUIT"
 const CIRCUIT_TEXT:   String = "CIRCUIT BROKEN  -  9: FAULTLINE"
 const FAULTLINE_TEXT: String = "FAULTLINE SEALED  -  PRESS X"
-const TERMINUS_TEXT: String = "✓ TRUE END  -  PRESS X"
+const TERMINUS_TEXT: String = "* TRUE END  -  PRESS X"
 
 const STORY_LINES: Array[String] = [
 	"21XX. THE OUTER GRID HAS FALLEN.",
@@ -84,8 +84,8 @@ const STAGE_LIST: Array = [
 	["daily",     "D // DAILY RUN"],
 ]
 
-const STAGE_CLEAR_MARK: String = "✓"
-const STAGE_TRUE_END_MARK: String = "✓ TRUE END"
+const STAGE_CLEAR_MARK: String = "*"
+const STAGE_TRUE_END_MARK: String = "* TRUE END"
 const STAGE_ROW_START_Y: float = 48.0
 const STAGE_ROW_GAP: float = 9.0
 

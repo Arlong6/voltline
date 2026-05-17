@@ -24,51 +24,20 @@ func after_each() -> void:
 
 
 # ---------------------------------------------------------------------------
-# is_stage_unlocked
+# is_stage_unlocked — v0.80.2 opens every stage from the title's stage
+# select so the Web demo lets visitors sample any sector immediately.
+# The progression-based tests are replaced with a single openness check.
 # ---------------------------------------------------------------------------
 
-func test_stage_1_always_unlocked() -> void:
-	assert_true(Game.is_stage_unlocked("stage_1"),
-		"stage_1 must be accessible from the very first run")
-
-
-func test_stage_2_locked_until_stage_1_cleared() -> void:
-	assert_false(Game.is_stage_unlocked("stage_2"),
-		"stage_2 should be locked before stage_1 has a best score")
-	Game.best_scores["stage_1"] = 1000
-	assert_true(Game.is_stage_unlocked("stage_2"),
-		"stage_2 should unlock once stage_1 has any best score")
-
-
-func test_stage_5_requires_game_cleared_flag() -> void:
-	assert_false(Game.is_stage_unlocked("stage_5"))
-	Game.game_cleared = true
-	assert_true(Game.is_stage_unlocked("stage_5"),
-		"stage_5 should unlock when game_cleared is set")
-
-
-func test_boss_rush_requires_true_cleared() -> void:
-	Game.game_cleared = true
-	assert_false(Game.is_stage_unlocked("boss_rush"),
-		"boss_rush requires true_cleared, not just game_cleared")
-	Game.true_cleared = true
-	assert_true(Game.is_stage_unlocked("boss_rush"))
-
-
-func test_stage_6_requires_boss_rush_cleared() -> void:
-	Game.true_cleared = true
-	assert_false(Game.is_stage_unlocked("stage_6"),
-		"stage_6 requires boss_rush_cleared, not just true_cleared")
-	Game.boss_rush_cleared = true
-	assert_true(Game.is_stage_unlocked("stage_6"))
-
-
-func test_stage_7_requires_architect_cleared() -> void:
-	Game.boss_rush_cleared = true
-	assert_false(Game.is_stage_unlocked("stage_7"),
-		"stage_7 requires architect_cleared, not just boss_rush_cleared")
-	Game.architect_cleared = true
-	assert_true(Game.is_stage_unlocked("stage_7"))
+func test_every_stage_key_is_unlocked_from_a_fresh_save() -> void:
+	for key in [
+		"stage_1", "stage_2", "stage_3", "stage_4", "stage_5",
+		"boss_rush",
+		"stage_6", "stage_7", "stage_8", "stage_9", "stage_10",
+		"daily",
+	]:
+		assert_true(Game.is_stage_unlocked(key),
+			"%s should be unlocked on the Web demo's fresh save" % key)
 
 
 func test_register_stage_7_clear_sets_labyrinth_flag() -> void:
@@ -80,14 +49,6 @@ func test_register_stage_7_clear_sets_labyrinth_flag() -> void:
 		"register_clear('stage_7') must flip labyrinth_cleared")
 
 
-func test_stage_8_requires_labyrinth_cleared() -> void:
-	Game.architect_cleared = true
-	assert_false(Game.is_stage_unlocked("stage_8"),
-		"stage_8 requires labyrinth_cleared, not just architect_cleared")
-	Game.labyrinth_cleared = true
-	assert_true(Game.is_stage_unlocked("stage_8"))
-
-
 func test_register_stage_8_clear_sets_circuit_flag() -> void:
 	assert_false(Game.circuit_cleared,
 		"circuit_cleared should start false in test fixtures")
@@ -95,16 +56,6 @@ func test_register_stage_8_clear_sets_circuit_flag() -> void:
 	Game.register_clear("stage_8")
 	assert_true(Game.circuit_cleared,
 		"register_clear('stage_8') must flip circuit_cleared")
-
-
-func test_daily_is_always_unlocked() -> void:
-	assert_true(Game.is_stage_unlocked("daily"),
-		"daily run must be available from the very first session")
-
-
-func test_unknown_key_returns_false() -> void:
-	assert_false(Game.is_stage_unlocked("not_a_stage"),
-		"unknown stage keys should return false, not crash")
 
 
 # ---------------------------------------------------------------------------

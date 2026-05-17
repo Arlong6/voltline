@@ -9,7 +9,7 @@ extends "res://scripts/boss.gd"
 @export var teleport_anchors: Array[Vector2] = []
 
 const MAX_HP: int = 130
-const BOSS_LABEL: String = "AXIS-Ω"
+const BOSS_LABEL: String = "AXIS-OMEGA"
 const BODY_RADIUS: float = 26.0
 const OUTER_RING_RADIUS: float = 36.0
 const OUTER_RING_DOTS: int = 4

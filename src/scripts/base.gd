@@ -41,7 +41,7 @@ const ECHO_LINES: PackedStringArray = [
 	"我是 ECHO，這個基地的檔案管理員。",
 	"那些失控的 boss 原本都是這個系統的子模組。",
 	"R-08 是巡邏程式、OMEGA-X 管權限、GRID-0 是 AI 核心...",
-	"最深處的 AXIS-Ω 才是真正出問題的東西。",
+	"最深處的 AXIS-OMEGA 才是真正出問題的東西。",
 	"小心點，process。",
 ]
 
@@ -104,7 +104,7 @@ const STAGE_BRIEFINGS: Dictionary[int, Array] = {
 		"預讀它的路徑、別追，等它停下來再開火。",
 	],
 	10: [
-		"SECTOR 10 — AXIS-Ω 在最深處。",
+		"SECTOR 10 — AXIS-OMEGA 在最深處。",
 		"打完這一仗，系統就還給我們了。",
 	],
 }

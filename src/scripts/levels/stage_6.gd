@@ -98,7 +98,7 @@ const SPIKE_POSITIONS: Array[Vector2] = [
 	Vector2(770.0, 176.0),
 ]
 
-const STAGE_NAME: String = "SECTOR ⊥ // THE ARCHITECT"
+const STAGE_NAME: String = "SECTOR T // THE ARCHITECT"
 const STAGE_INTRO_DURATION: float = 2.4
 const GOAL_DELAY: float = 3.0
 

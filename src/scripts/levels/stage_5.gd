@@ -116,7 +116,7 @@ const SPIKE_POSITIONS: Array[Vector2] = [
 	Vector2(1140.0, 176.0),
 ]
 
-const STAGE_NAME: String = "SECTOR ∞ // VOLTLINE INFINITY"
+const STAGE_NAME: String = "SECTOR INF // VOLTLINE INFINITY"
 const STAGE_INTRO_DURATION: float = 2.4
 const GOAL_DELAY: float = 3.0
 
