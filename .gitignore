@@ -1,0 +1,3 @@
+
+# v0.79 — generated Web build artifacts (re-export with: godot --export-release Web ../dist/index.html)
+dist/
