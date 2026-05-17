@@ -58,8 +58,57 @@ const NIX_LINES: PackedStringArray = [
 	"我這邊還有些之前 dump 出來的 skin 資料。",
 	"打 boss 撿到的 coin 可以用來解鎖。",
 	"記得，外觀不影響你的 hitbox，純粹是給自己看的。",
-	"想看看現在有什麼？按 X 切到 skin 選單。（skin shop 改建中）",
+	"按 X 切到 skin 選單。",
 ]
+
+# v0.73 — per-stage 2-line briefings from AKI, played the first time the
+# player enters each terminal in story mode. Keyed by stage index 1-10.
+# Stored as Array[String] (not PackedStringArray) because the packed-array
+# constructor isn't a constant expression in GDScript. Converted at the
+# call site via PackedStringArray(...).
+const STAGE_BRIEFINGS: Dictionary[int, Array] = {
+	1: [
+		"SECTOR 1。系統入口。",
+		"先把那些殘渣 process 清掉，幫我們找到登入點。",
+	],
+	2: [
+		"SECTOR 2 出現 R-08 — 巡邏程式長期沒重啟、徹底發瘋了。",
+		"關掉它。動作快。",
+	],
+	3: [
+		"SECTOR 3 有個叫 OMEGA-X 的權限管理程式。",
+		"它正用我們自己的 admin token 把所有 process 鎖出來。",
+	],
+	4: [
+		"SECTOR 4 的 TyrantZ 自稱是接管者。",
+		"別聽它放話，瞄準腦袋就好。",
+	],
+	5: [
+		"SECTOR 5 — TyrantZ 又跑出來，這次升級了。",
+		"擋住它，給我們爭取時間。",
+	],
+	6: [
+		"SECTOR 6 是 GRID-0。",
+		"它不只是 boss — 是把整個 sector 改寫成自己一部分的 AI 核心。",
+	],
+	7: [
+		"SECTOR 7 的拓樸被它改成迷宮了。",
+		"小心走，每條路都可能繞回來。",
+	],
+	8: [
+		"SECTOR 8 是 GRID-0 的備援節點。",
+		"上次只是試水溫，這次是真打。",
+	],
+	9: [
+		"SECTOR 9 的 VEIN-K 會在自己埋的 anchor 之間瞬移。",
+		"預讀它的路徑、別追，等它停下來再開火。",
+	],
+	10: [
+		"SECTOR 10 — AXIS-Ω 在最深處。",
+		"打完這一仗，系統就還給我們了。",
+	],
+}
+const BRIEFING_TITLE_FORMAT: String = "AKI // SECTOR %d BRIEFING"
 
 var _nearby_npc: String = ""
 var _player: Player
@@ -147,7 +196,10 @@ func _process_interactions() -> void:
 		_prompt_label.visible = false
 
 
-## Attempts to enter the numbered stage terminal. Locked terminals stay in base.
+## Attempts to enter the numbered stage terminal. Locked terminals stay in
+## base. In story mode, the first entry into each sector plays a 2-line
+## AKI briefing as an interstitial cutscene; subsequent entries skip
+## straight into the stage so retries don't get gated.
 func interact_with_terminal(index: int) -> void:
 	if index < 1 or index > TERMINAL_COUNT:
 		return
@@ -157,7 +209,24 @@ func interact_with_terminal(index: int) -> void:
 		Sfx.play("enemy_hit")
 		return
 	Game.reset_run()
+	if _should_play_briefing(stage_key, index):
+		Game.briefings_seen.append(stage_key)
+		Game.save_to_file()
+		Game.play_cutscene(
+			BRIEFING_TITLE_FORMAT % index,
+			PackedStringArray(STAGE_BRIEFINGS[index]),
+			stage_key,
+		)
+		return
 	Game.goto_level(stage_key)
+
+
+func _should_play_briefing(stage_key: String, index: int) -> bool:
+	if not Game.story_mode:
+		return false
+	if Game.briefings_seen.has(stage_key):
+		return false
+	return STAGE_BRIEFINGS.has(index)
 
 
 func _interact_with_npc(npc_name: String) -> void:

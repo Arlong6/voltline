@@ -20,6 +20,8 @@ func before_each() -> void:
 	Game.circuit_cleared = false
 	Game.faultline_cleared = false
 	Game.terminus_cleared = false
+	Game.story_mode = false
+	Game.briefings_seen.clear()
 	container = Node2D.new()
 	add_child_autofree(container)
 	base = BASE_SCENE.instantiate() as Node2D
@@ -57,3 +59,30 @@ func test_terminal_unlocked_routes_to_stage() -> void:
 	base.interact_with_terminal(3)
 	assert_eq(Game._last_goto_target, "stage_3",
 		"unlocked terminal should route to its matching stage")
+
+
+# v0.73 — briefing flow
+
+func test_story_mode_first_terminal_entry_plays_briefing() -> void:
+	Game.best_scores["stage_1"] = 1000
+	Game.best_scores["stage_2"] = 1000
+	Game.story_mode = true
+	Game.briefings_seen.clear()
+	base.interact_with_terminal(3)
+	assert_eq(Game._last_goto_target, "cutscene",
+		"first entry into a sector in story mode should play the briefing first")
+	assert_eq(Game.cutscene_next, "stage_3",
+		"the briefing cutscene should continue into the targeted stage")
+	assert_true(Game.briefings_seen.has("stage_3"),
+		"the briefing should be marked as seen so retries skip it")
+
+
+func test_story_mode_repeat_terminal_entry_skips_briefing() -> void:
+	Game.best_scores["stage_1"] = 1000
+	Game.best_scores["stage_2"] = 1000
+	Game.story_mode = true
+	Game.briefings_seen.clear()
+	Game.briefings_seen.append("stage_3")
+	base.interact_with_terminal(3)
+	assert_eq(Game._last_goto_target, "stage_3",
+		"repeat visits should skip the briefing and go straight into the stage")

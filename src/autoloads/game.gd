@@ -64,6 +64,10 @@ var story_progress: int = 0
 ## NPC ids the player has spoken to during the story run.
 var npcs_seen: PackedStringArray = PackedStringArray()
 
+## Stage keys whose AKI briefing has already been shown in story mode.
+## Re-entries skip straight into the stage so retries aren't gated.
+var briefings_seen: PackedStringArray = PackedStringArray()
+
 # ---------------------------------------------------------------------------
 # Achievements (v0.65) — see ACHIEVEMENT_DEFS for the full table.
 # ---------------------------------------------------------------------------
@@ -812,6 +816,7 @@ func save_to_file() -> void:
 		ach[key] = bool(achievements[key])
 	cfg.set_value("achievements", "unlocked", ach)
 	cfg.set_value("game", "walls_broken", walls_broken)
+	cfg.set_value("story", "briefings_seen", Array(briefings_seen))
 	cfg.save(SAVE_PATH)
 
 
@@ -863,6 +868,10 @@ func load_from_file() -> void:
 	for key in loaded_ach.keys():
 		achievements[String(key)] = bool(loaded_ach[key])
 	walls_broken = int(cfg.get_value("game", "walls_broken", 0))
+	var loaded_briefings: Array = cfg.get_value("story", "briefings_seen", [])
+	briefings_seen.clear()
+	for entry in loaded_briefings:
+		briefings_seen.append(String(entry))
 	apply_audio_settings()
 
 
