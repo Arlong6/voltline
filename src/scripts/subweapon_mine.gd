@@ -84,7 +84,7 @@ func detonate() -> void:
 	if not Game.test_mode:
 		Game.hit_stop(0.10, 0.04)
 		Game.request_shake(3.0)
-		Sfx.play("explode")
+		Sfx.play("mine_detonate")
 
 
 func _draw() -> void:

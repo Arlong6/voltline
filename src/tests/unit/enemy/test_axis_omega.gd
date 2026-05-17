@@ -8,9 +8,11 @@ const ANCHOR_B: Vector2 = Vector2(200.0, 100.0)
 const ANCHOR_C: Vector2 = Vector2(100.0, 160.0)
 const ANCHOR_D: Vector2 = Vector2(200.0, 160.0)
 const ANCHORS: Array[Vector2] = [ANCHOR_A, ANCHOR_B, ANCHOR_C, ANCHOR_D]
-const PHASE_2_HP: int = 100
-const PHASE_3_HP: int = 60
-const PHASE_4_HP: int = 30
+# v0.75 — recomputed for AXIS-Ω MAX_HP 130 (was 160). Phase boundaries
+# are unchanged percentages: P2 < 75%, P3 < 50%, P4 < 25%.
+const PHASE_2_HP: int = 80   # 61.5% of 130 — solidly inside phase 2
+const PHASE_3_HP: int = 50   # 38.5% of 130 — solidly inside phase 3
+const PHASE_4_HP: int = 25   # 19.2% of 130 — solidly inside phase 4
 const PHASE_2_TELEPORT_DRIVE: float = 2.05
 const PHASE_3_SUMMON_DRIVE: float = 3.05
 const RADIAL_8_COUNT: int = 8

@@ -259,17 +259,15 @@ func _spawn_room_a() -> void:
 
 
 func _spawn_room_b() -> void:
+	# v0.75 — Drone + Stalker removed. Two airborne harassers on top of
+	# four ground threats made GAUNTLET feel cluttered to the playtester;
+	# trimming the flying pair leaves the room readable while keeping the
+	# four melee/ranged archetypes (Brute / Spitter / Shieldbearer / Lancer).
 	var brute: Brute = BRUTE_SCENE.instantiate() as Brute
 	brute.position = ROOM_B_BRUTE_POS
 	brute.patrol_min_x = ROOM_B_BRUTE_PATROL.x
 	brute.patrol_max_x = ROOM_B_BRUTE_PATROL.y
 	add_child(brute)
-	var drone: Drone = DRONE_SCENE.instantiate() as Drone
-	drone.position = ROOM_B_DRONE_POS
-	drone.hover_y = ROOM_B_DRONE_POS.y
-	drone.patrol_min_x = ROOM_B_DRONE_PATROL.x
-	drone.patrol_max_x = ROOM_B_DRONE_PATROL.y
-	add_child(drone)
 	var spitter: Spitter = SPITTER_SCENE.instantiate() as Spitter
 	spitter.position = ROOM_B_SPITTER_POS
 	add_child(spitter)
@@ -283,12 +281,6 @@ func _spawn_room_b() -> void:
 	lancer.patrol_min_x = ROOM_B_LANCER_PATROL.x
 	lancer.patrol_max_x = ROOM_B_LANCER_PATROL.y
 	add_child(lancer)
-	var stalker: Stalker = STALKER_SCENE.instantiate() as Stalker
-	stalker.position = ROOM_B_STALKER_POS
-	stalker.hover_offset_y = ROOM_B_STALKER_POS.y - FLOOR_Y
-	stalker.patrol_min_x = ROOM_B_STALKER_PATROL.x
-	stalker.patrol_max_x = ROOM_B_STALKER_PATROL.y
-	add_child(stalker)
 
 
 func _spawn_room_c() -> void:

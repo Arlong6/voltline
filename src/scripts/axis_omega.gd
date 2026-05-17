@@ -8,7 +8,7 @@ extends "res://scripts/boss.gd"
 ## Teleport points injected by Stage 10 at spawn time.
 @export var teleport_anchors: Array[Vector2] = []
 
-const MAX_HP: int = 160
+const MAX_HP: int = 130
 const BOSS_LABEL: String = "AXIS-Ω"
 const BODY_RADIUS: float = 26.0
 const OUTER_RING_RADIUS: float = 36.0
@@ -50,7 +50,7 @@ const SWEEP_LASER_SIZE: Vector2 = Vector2(180.0, 8.0)
 const SWEEP_LASER_DURATION: float = 0.6
 const BOSS_FEET_OFFSET: Vector2 = Vector2(0.0, 26.0)
 const BREAKDOWN_ATTACK_INTERVAL: float = 2.5
-const BREAKDOWN_VULNERABLE_DURATION: float = 1.5
+const BREAKDOWN_VULNERABLE_DURATION: float = 2.0
 const SPREAD_3_COUNT: int = 3
 const SPREAD_5_COUNT: int = 5
 const SPREAD_3_DEG: float = 15.0
