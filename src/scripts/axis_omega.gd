@@ -270,6 +270,7 @@ func _perform_teleport() -> void:
 	collision_layer = COLLISION_DISABLED_LAYER
 	global_position = teleport_anchors[_anchor_index]
 	collision_layer = _saved_collision_layer
+	Sfx.play("teleport")
 	_attack_radial_8()
 
 

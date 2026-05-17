@@ -126,7 +126,7 @@ var _npc_positions: Dictionary[String, Vector2] = {
 
 func _ready() -> void:
 	Game.current_area = "base"
-	Music.play("title")
+	Music.play("base")
 	_build_static_block(Rect2(0.0, FLOOR_Y, float(VIEWPORT_W), FLOOR_HEIGHT), &"Floor")
 	_build_static_block(Rect2(0.0, 0.0, WALL_WIDTH, float(VIEWPORT_H)), &"LeftWall")
 	_build_static_block(Rect2(float(VIEWPORT_W) - WALL_WIDTH, 0.0, WALL_WIDTH, float(VIEWPORT_H)), &"RightWall")
@@ -206,7 +206,7 @@ func interact_with_terminal(index: int) -> void:
 	var stage_key: String = "stage_%d" % index
 	if not Game.is_stage_unlocked(stage_key):
 		_show_message("LOCKED")
-		Sfx.play("enemy_hit")
+		Sfx.play("lock")
 		return
 	Game.reset_run()
 	if _should_play_briefing(stage_key, index):
@@ -230,6 +230,7 @@ func _should_play_briefing(stage_key: String, index: int) -> bool:
 
 
 func _interact_with_npc(npc_name: String) -> void:
+	Sfx.play("npc_blip")
 	if Game.npcs_seen.find(npc_name) < 0:
 		Game.npcs_seen.append(npc_name)
 	match npc_name:

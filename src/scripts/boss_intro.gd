@@ -56,6 +56,7 @@ func _ready() -> void:
 	add_child(_name_label)
 
 	if not Game.test_mode:
+		Sfx.play("boss_stinger")
 		_play_intro()
 
 

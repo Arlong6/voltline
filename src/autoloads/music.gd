@@ -56,6 +56,11 @@ func _ready() -> void:
 		[A3, C4, E4, G4, A4, G4, E4, C4],
 		0.45, 0.12
 	)
+	# Base — slow, quiet hub arpeggio with breathing rests.
+	_tracks["base"] = _make_loop(
+		[A3, REST, C4, REST, E4, REST, G4, REST],
+		0.6, 0.08
+	)
 	# Stage — driving 8th-note bassline + alternating thirds, urgent feel.
 	_tracks["stage"] = _make_loop(
 		[A3, A3, C4, E4, A3, G4, E4, C4, A3, A3, D4, F4, A3, G4, F4, D4],

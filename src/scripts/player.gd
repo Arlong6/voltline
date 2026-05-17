@@ -438,11 +438,11 @@ func tick_movement(
 	if dash_pressed and _dash_timer <= 0.0 and slide_timer <= 0.0 and not is_diving:
 		if pressing_down and is_grounded:
 			slide_timer = slide_duration
-			Sfx.play("dash")
+			Sfx.play("slide")
 		elif pressing_down and not is_grounded:
 			is_diving = true
 			velocity.y = dive_speed
-			Sfx.play("dash")
+			Sfx.play("dive")
 		elif is_grounded:
 			_dash_timer = dash_duration
 			Sfx.play("dash")
@@ -531,7 +531,7 @@ func tick_movement(
 			velocity.x = wall_jump_velocity.x * float(push_dir)
 			facing = push_dir
 			_wall_jump_lockout_timer = wall_jump_lockout
-			Sfx.play("jump")
+			Sfx.play("wall_jump")
 		elif _coyote_timer > 0.0:
 			velocity.y = jump_velocity
 			_coyote_timer = 0.0
@@ -759,7 +759,7 @@ func _fire_subweapon() -> void:
 			)
 			parent.add_child(w)
 	Game.consume_subweapon()
-	Sfx.play("dash")  # repurpose the noise blip as a sub-weapon launch sting
+	Sfx.play("subweapon_fire")
 
 
 # Instantiates a Bullet pointed in the player's facing and attaches it as

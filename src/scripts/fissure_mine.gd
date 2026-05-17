@@ -58,6 +58,7 @@ func _explode() -> void:
 	if _exploded:
 		return
 	_exploded = true
+	Sfx.play("fissure_explode")
 	_attack_radial_4()
 	queue_free()
 

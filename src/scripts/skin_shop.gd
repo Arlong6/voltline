@@ -98,7 +98,7 @@ func _handle_slot(idx: int) -> void:
 		else:
 			Game.select_skin(idx)
 			_set_toast("Switched to %s" % name)
-			Sfx.play("coin")
+			Sfx.play("coin_pickup")
 		queue_redraw()
 		return
 	var cost: int = Game.SKIN_COSTS[idx]
@@ -111,7 +111,7 @@ func _handle_slot(idx: int) -> void:
 	Game.skin_index = idx
 	Game.save_to_file()
 	_set_toast("Bought %s for %d coin" % [name, cost])
-	Sfx.play("coin")
+	Sfx.play("coin_pickup")
 	queue_redraw()
 
 

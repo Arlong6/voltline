@@ -102,6 +102,7 @@ func unlock_achievement(id: String) -> bool:
 	if bool(achievements.get(id, false)):
 		return false
 	achievements[id] = true
+	Sfx.play("achievement")
 	save_to_file()
 	return true
 
