@@ -411,7 +411,7 @@ func _draw_stage_select(font: Font) -> void:
 			STAGE_LIST.size() - 1  # exclude DAILY entry
 		],
 		stats_y, STORY_FONT_SIZE, COLOR_FLAVOR)
-	_draw_centered(font, "↑↓ NAVIGATE   X ENTER   F9 UNLOCK ALL", 180.0,
+	_draw_centered(font, "UP/DOWN NAVIGATE   X ENTER   F9 UNLOCK ALL", 180.0,
 		STORY_FONT_SIZE, COLOR_NEON_DARK)
 
 

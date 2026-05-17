@@ -236,7 +236,7 @@ func _render_main(font: Font) -> void:
 		var color: Color = COLOR_HILITE if _selection == i else COLOR_LABEL
 		var prefix: String = "> " if _selection == i else "  "
 		_draw_centered(font, prefix + _MAIN_LABELS[i], y, ITEM_FONT_SIZE, color)
-	_draw_centered(font, "↑↓ NAVIGATE   X CONFIRM   ESC CLOSE", 168.0,
+	_draw_centered(font, "UP/DOWN NAVIGATE   X CONFIRM   ESC CLOSE", 168.0,
 		HINT_FONT_SIZE, COLOR_DIM_TX)
 
 
@@ -260,7 +260,7 @@ func _render_settings(font: Font) -> void:
 	var back_color: Color = COLOR_HILITE if _selection == SettingsItem.BACK else COLOR_LABEL
 	var back_prefix: String = "> " if _selection == SettingsItem.BACK else "  "
 	_draw_centered(font, back_prefix + "BACK", back_y, ITEM_FONT_SIZE, back_color)
-	_draw_centered(font, "←→ ADJUST   X CONFIRM   ESC CLOSE", 174.0,
+	_draw_centered(font, "LEFT/RIGHT ADJUST   X CONFIRM   ESC CLOSE", 174.0,
 		HINT_FONT_SIZE, COLOR_DIM_TX)
 
 

@@ -55,7 +55,7 @@ const BACK_ACTIONS: Array[String] = ["jump", "dash", "ui_cancel"]
 
 # Each entry is [label, key_combo, note]. Aligned with consistent columns.
 const CONTROL_ROWS: Array[Array] = [
-	["Move",          "← →  /  WASD",  ""],
+	["Move",          "ARROWS  /  WASD",  ""],
 	["Jump",          "X",             "hold for higher jump"],
 	["Shoot",         "C",             "hold to charge Lv1 / Lv2"],
 	["Dash",          "Z",             ""],
