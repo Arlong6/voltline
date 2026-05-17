@@ -42,6 +42,8 @@ const STORY_LINES: Array[String] = [
 const CONTROLS_LINE: String = "ARROWS/WASD MOVE   X JUMP   C SHOOT   Z DASH"
 const STORY_MODE_START_TEXT: String = "[5] STORY MODE — START"
 const STORY_MODE_CONTINUE_TEXT: String = "[5] STORY MODE — CONTINUE"
+const NG_PLUS_START_TEXT: String = "NG+ MODE — START"
+const NG_PLUS_CONTINUE_TEXT: String = "NG+ MODE — CONTINUE"
 
 const TITLE_FONT_SIZE: int = 36
 const SUBTITLE_FONT_SIZE: int = 14
@@ -99,6 +101,7 @@ func _ready() -> void:
 	# v0.67 — clear the daily-run flag when arriving at the title so a
 	# return-to-title from inside a daily run doesn't keep modifiers on.
 	Game.daily_run_active = false
+	Game.hard_mode = false
 	# Pull persistent state in from disk every time the title screen
 	# loads — covers the cold-boot case and the "press R to return"
 	# round-trip so the shop UI always shows fresh values.
@@ -171,14 +174,23 @@ func _handle_main_input(event: InputEventKey) -> void:
 		KEY_5:
 			get_viewport().set_input_as_handled()
 			_transitioning = true
+			Game.hard_mode = false
 			if Game.story_progress > 0:
 				_fade_out_then_goto("base")
 			else:
 				_fade_out_then_start_story_mode()
 			return
+		KEY_6:
+			if not Game.terminus_cleared:
+				return
+			get_viewport().set_input_as_handled()
+			_transitioning = true
+			_fade_out_then_start_ng_plus()
+			return
 	if event.is_action_pressed("jump") or event.is_action_pressed("shoot"):
 		get_viewport().set_input_as_handled()
 		_transitioning = true
+		Game.hard_mode = false
 		Game.story_mode = false
 		Game.reset_run()
 		# Fresh runs play the intro cutscene before stage_1; returning
@@ -212,6 +224,7 @@ func _handle_stage_select_input(event: InputEventKey) -> void:
 		# picks today's stage + modifier deterministically.
 		if key == "daily":
 			Game.story_mode = false
+			Game.hard_mode = false
 			var tween: Tween = create_tween()
 			tween.tween_property(_fade_rect, "color:a", 1.0, FADE_OUT_DURATION)
 			tween.tween_callback(func() -> void:
@@ -303,28 +316,31 @@ func _draw_main(font: Font) -> void:
 
 	_draw_centered(font, CONTROLS_LINE, 177.0, STORY_FONT_SIZE, COLOR_NEON_DARK)
 	var story_label: String = STORY_MODE_CONTINUE_TEXT if Game.story_progress > 0 else STORY_MODE_START_TEXT
-	_draw_centered(font, story_label, 189.0, STORY_FONT_SIZE, COLOR_GOLD)
+	_draw_centered(font, story_label, 188.0, STORY_FONT_SIZE, COLOR_GOLD)
+	if Game.terminus_cleared:
+		var ng_plus_label: String = NG_PLUS_START_TEXT if Game.best_times_hard.is_empty() else NG_PLUS_CONTINUE_TEXT
+		_draw_centered(font, "[6] %s" % ng_plus_label, 199.0, STORY_FONT_SIZE, Game.HARD_MODE_COLOR)
 
 	var blink: bool = sin(_t * 4.0) > 0.0
 	if blink:
 		if Game.terminus_cleared:
-			_draw_centered(font, TERMINUS_TEXT, 204.0, PROMPT_FONT_SIZE, COLOR_CLEAR)
+			_draw_centered(font, TERMINUS_TEXT, 211.0, PROMPT_FONT_SIZE, COLOR_CLEAR)
 		elif Game.faultline_cleared:
-			_draw_centered(font, FAULTLINE_TEXT, 204.0, PROMPT_FONT_SIZE, COLOR_CLEAR)
+			_draw_centered(font, FAULTLINE_TEXT, 211.0, PROMPT_FONT_SIZE, COLOR_CLEAR)
 		elif Game.circuit_cleared:
-			_draw_centered(font, CIRCUIT_TEXT, 204.0, PROMPT_FONT_SIZE, COLOR_CLEAR)
+			_draw_centered(font, CIRCUIT_TEXT, 211.0, PROMPT_FONT_SIZE, COLOR_CLEAR)
 		elif Game.labyrinth_cleared:
-			_draw_centered(font, LABYRINTH_TEXT, 204.0, PROMPT_FONT_SIZE, COLOR_CLEAR)
+			_draw_centered(font, LABYRINTH_TEXT, 211.0, PROMPT_FONT_SIZE, COLOR_CLEAR)
 		elif Game.architect_cleared:
-			_draw_centered(font, ARCHITECT_TEXT, 204.0, PROMPT_FONT_SIZE, COLOR_CLEAR)
+			_draw_centered(font, ARCHITECT_TEXT, 211.0, PROMPT_FONT_SIZE, COLOR_CLEAR)
 		elif Game.boss_rush_cleared:
-			_draw_centered(font, RUSH_CLEAR_TEXT, 204.0, PROMPT_FONT_SIZE, COLOR_CLEAR)
+			_draw_centered(font, RUSH_CLEAR_TEXT, 211.0, PROMPT_FONT_SIZE, COLOR_CLEAR)
 		elif Game.true_cleared:
-			_draw_centered(font, TRUE_CLEAR_TEXT, 204.0, PROMPT_FONT_SIZE, COLOR_CLEAR)
+			_draw_centered(font, TRUE_CLEAR_TEXT, 211.0, PROMPT_FONT_SIZE, COLOR_CLEAR)
 		elif Game.game_cleared:
-			_draw_centered(font, CLEAR_TEXT, 204.0, PROMPT_FONT_SIZE, COLOR_CLEAR)
+			_draw_centered(font, CLEAR_TEXT, 211.0, PROMPT_FONT_SIZE, COLOR_CLEAR)
 		else:
-			_draw_centered(font, PROMPT_TEXT, 204.0, PROMPT_FONT_SIZE, COLOR_PROMPT)
+			_draw_centered(font, PROMPT_TEXT, 211.0, PROMPT_FONT_SIZE, COLOR_PROMPT)
 
 
 func _draw_stage_select(font: Font) -> void:
@@ -359,6 +375,10 @@ func _draw_stage_select(font: Font) -> void:
 		draw_string(font, Vector2(20.0, y),
 			"%s%s" % [prefix, label], HORIZONTAL_ALIGNMENT_LEFT, -1,
 			STORY_FONT_SIZE, color)
+		if Game.hard_mode and key != "daily":
+			draw_string(font, Vector2(150.0, y),
+				"[HARD]", HORIZONTAL_ALIGNMENT_LEFT, -1,
+				STORY_FONT_SIZE, Game.HARD_MODE_COLOR)
 		if unlocked:
 			var stat_text: String
 			if key == "daily":
@@ -370,9 +390,9 @@ func _draw_stage_select(font: Font) -> void:
 				var today_score: int = int(Game.daily_best_scores.get(Game.today_iso(), 0))
 				stat_text = "%s  %s  best %d" % [stage_key.to_upper(), mod_label, today_score]
 			else:
-				var score: int = int(Game.best_scores.get(key, 0))
+				var score: int = int(Game.best_scores_hard.get(key, 0)) if Game.hard_mode else int(Game.best_scores.get(key, 0))
 				var rank: String = "—" if score == 0 else Game.rank_for_score(score)
-				var time: float = float(Game.best_times.get(key, INF))
+				var time: float = float(Game.best_times_hard.get(key, INF)) if Game.hard_mode else float(Game.best_times.get(key, INF))
 				var time_str: String = Game.format_time(time)
 				stat_text = "%5d  %3s   %s" % [score, rank, time_str]
 			draw_string(font, Vector2(190.0, y),
@@ -382,7 +402,8 @@ func _draw_stage_select(font: Font) -> void:
 	_draw_centered(font,
 		"RUNS %d   COINS %d   SECTORS CLEARED %d/%d" % [
 			Game.total_runs, Game.coins,
-			Game.best_scores.size(), STAGE_LIST.size() - 1  # exclude DAILY entry
+			(Game.best_scores_hard.size() if Game.hard_mode else Game.best_scores.size()),
+			STAGE_LIST.size() - 1  # exclude DAILY entry
 		],
 		stats_y, STORY_FONT_SIZE, COLOR_FLAVOR)
 	_draw_centered(font, "↑↓ NAVIGATE   X ENTER   F9 UNLOCK ALL", 180.0,
@@ -579,4 +600,13 @@ func _fade_out_then_start_story_mode() -> void:
 	tween.tween_callback(func() -> void:
 		if is_inside_tree():
 			Game.start_story_mode()
+	)
+
+
+func _fade_out_then_start_ng_plus() -> void:
+	var tween: Tween = create_tween()
+	tween.tween_property(_fade_rect, "color:a", 1.0, FADE_OUT_DURATION)
+	tween.tween_callback(func() -> void:
+		if is_inside_tree():
+			Game.start_ng_plus()
 	)

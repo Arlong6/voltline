@@ -47,6 +47,16 @@ var best_scores: Dictionary[String, int] = {}
 ## Best clear time per stage key (seconds). Lower = better. Persisted.
 var best_times: Dictionary[String, float] = {}
 
+## True while playing in NG+/Hard Mode. Set by title or stage-select on entry,
+## cleared when the player returns to title. Not persisted.
+var hard_mode: bool = false
+
+## Per-stage best clear time in Hard mode (separate from best_times).
+var best_times_hard: Dictionary[String, float] = {}
+
+## Per-stage best score in Hard mode (separate from best_scores).
+var best_scores_hard: Dictionary[String, int] = {}
+
 ## Total number of stage runs initiated since save creation. Bumped by
 ## reset_run() so dying + retrying counts as one run.
 var total_runs: int = 0
@@ -175,6 +185,24 @@ const SUBWEAPON_WAVE:      String = "wave"
 # constant expressions in GDScript. Treat as immutable in code.
 var SUBWEAPON_LIST: PackedStringArray = PackedStringArray([
 	SUBWEAPON_MISSILE, SUBWEAPON_SHOCKWAVE, SUBWEAPON_MINE, SUBWEAPON_WAVE,
+])
+
+const HARD_ENEMY_HP_MULTIPLIER: float = 1.5
+const HARD_ENEMY_DAMAGE_MULTIPLIER: float = 1.5
+const HARD_BOSS_HP_MULTIPLIER: float = 1.3
+const HARD_BOSS_INTERVAL_MULTIPLIER: float = 0.85
+const HARD_MODE_LABEL_POS: Vector2 = Vector2(8.0, 40.0)
+const HARD_MODE_LABEL_SIZE: Vector2 = Vector2(96.0, 14.0)
+const HARD_MODE_LABEL_FONT_SIZE: int = 10
+const HARD_MODE_COLOR: Color = Color("#E04050")
+
+# Declared as `var` because PackedStringArray constructors are not
+# constant expressions in GDScript. Treat as immutable in code.
+var NG_PLUS_INTRO_LINES: PackedStringArray = PackedStringArray([
+	"[T+00:00] 系統重新啟動。",
+	"[T+00:01] 偵測到先前的 cleared sector — 套用 hardened mode。",
+	"[T+00:03] 所有 process 訊號強化中...",
+	"[T+00:04] >> 你還想再來一次？",
 ])
 
 const SUBWEAPON_COOLDOWNS: Dictionary = {
@@ -638,13 +666,19 @@ var last_clear_coin_bonus: int = 0
 ## previous record (independent of score).
 func register_clear(stage_key: String) -> bool:
 	var score: int = compute_score()
-	var prev: int = int(best_scores.get(stage_key, 0))
+	var prev: int = int(best_scores_hard.get(stage_key, 0)) if hard_mode else int(best_scores.get(stage_key, 0))
 	var is_new_best: bool = score > prev
 	if is_new_best:
-		best_scores[stage_key] = score
-	var prev_time: float = float(best_times.get(stage_key, INF))
+		if hard_mode:
+			best_scores_hard[stage_key] = score
+		else:
+			best_scores[stage_key] = score
+	var prev_time: float = float(best_times_hard.get(stage_key, INF)) if hard_mode else float(best_times.get(stage_key, INF))
 	if session_time < prev_time:
-		best_times[stage_key] = session_time
+		if hard_mode:
+			best_times_hard[stage_key] = session_time
+		else:
+			best_times[stage_key] = session_time
 	# v0.65 — achievement triggers tied to clear context.
 	if stage_key == "stage_1":
 		unlock_achievement("first_clear")
@@ -751,6 +785,38 @@ func is_stage_unlocked(stage_key: String) -> bool:
 	return false
 
 
+## Applies hard-mode multipliers to a freshly-spawned enemy. No-op when
+## hard_mode is off. Call before add_child so _ready sees the tuned max_hp.
+func apply_difficulty_to_enemy(enemy) -> void:
+	if not hard_mode:
+		return
+	enemy.max_hp = int(ceil(float(enemy.max_hp) * HARD_ENEMY_HP_MULTIPLIER))
+	enemy.contact_damage = int(ceil(float(enemy.contact_damage) * HARD_ENEMY_DAMAGE_MULTIPLIER))
+
+
+## Applies hard-mode multipliers to a freshly-spawned boss. No-op when
+## hard_mode is off. Call after spawn overrides and before hp is initialized.
+func apply_difficulty_to_boss(boss) -> void:
+	if not hard_mode:
+		return
+	boss.max_hp = int(ceil(float(boss.max_hp) * HARD_BOSS_HP_MULTIPLIER))
+	if boss.get("shoot_interval") != null:
+		boss.shoot_interval *= HARD_BOSS_INTERVAL_MULTIPLIER
+
+
+## Adds the top-left NG+ marker to a stage HUD when Hard Mode is active.
+func add_hard_mode_hud_label(hud_layer: CanvasLayer) -> void:
+	if not hard_mode:
+		return
+	var label: Label = Label.new()
+	label.text = "// NG+"
+	label.position = HARD_MODE_LABEL_POS
+	label.size = HARD_MODE_LABEL_SIZE
+	label.add_theme_font_size_override("font_size", HARD_MODE_LABEL_FONT_SIZE)
+	label.add_theme_color_override("font_color", HARD_MODE_COLOR)
+	hud_layer.add_child(label)
+
+
 ## Applies all purchased upgrades to a freshly-instantiated Player BEFORE
 ## it enters the tree (so its _ready picks up the new max_hp).
 func apply_upgrades_to(player: Player) -> void:
@@ -801,6 +867,14 @@ func save_to_file() -> void:
 	for key in best_times.keys():
 		times[key] = best_times[key]
 	cfg.set_value("game", "best_times", times)
+	var hard_scores: Dictionary = {}
+	for key in best_scores_hard.keys():
+		hard_scores[key] = best_scores_hard[key]
+	cfg.set_value("game", "best_scores_hard", hard_scores)
+	var hard_times: Dictionary = {}
+	for key in best_times_hard.keys():
+		hard_times[key] = best_times_hard[key]
+	cfg.set_value("game", "best_times_hard", hard_times)
 	cfg.set_value("game", "total_runs", total_runs)
 	cfg.set_value("settings", "master_volume", setting_master_volume)
 	cfg.set_value("settings", "sfx_volume", setting_sfx_volume)
@@ -854,6 +928,14 @@ func load_from_file() -> void:
 	best_times.clear()
 	for key in loaded_times.keys():
 		best_times[String(key)] = float(loaded_times[key])
+	var loaded_hard_scores: Dictionary = cfg.get_value("game", "best_scores_hard", {})
+	best_scores_hard.clear()
+	for key in loaded_hard_scores.keys():
+		best_scores_hard[String(key)] = int(loaded_hard_scores[key])
+	var loaded_hard_times: Dictionary = cfg.get_value("game", "best_times_hard", {})
+	best_times_hard.clear()
+	for key in loaded_hard_times.keys():
+		best_times_hard[String(key)] = float(loaded_hard_times[key])
 	total_runs = int(cfg.get_value("game", "total_runs", 0))
 	setting_master_volume = float(cfg.get_value("settings", "master_volume", 0.7))
 	setting_sfx_volume    = float(cfg.get_value("settings", "sfx_volume", 1.0))
@@ -921,6 +1003,14 @@ func _stage_number(stage_key: String) -> int:
 func start_story_mode() -> void:
 	story_mode = true
 	play_cutscene("// VOLTLINE — SYSTEM LOG", INTRO_LINES, "base")
+
+
+## Starts NG+/Hard Mode through the hub-driven story flow.
+func start_ng_plus() -> void:
+	hard_mode = true
+	story_mode = true
+	briefings_seen.clear()
+	play_cutscene("// NG+ INITIATED", NG_PLUS_INTRO_LINES, "base")
 
 
 ## After stage clear: routes to base if story mode, else title.

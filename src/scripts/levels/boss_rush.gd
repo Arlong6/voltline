@@ -148,6 +148,7 @@ func _start_next_round() -> void:
 	var scene: PackedScene = data["scene"]
 	_current_boss = scene.instantiate()
 	_current_boss.position = BOSS_SPAWN
+	Game.apply_difficulty_to_boss(_current_boss)
 	add_child(_current_boss)
 	_current_boss.died.connect(_on_round_cleared)
 	# Hide the round banner after a beat.
@@ -258,6 +259,7 @@ func _build_hud() -> void:
 	buff_hud.position = Vector2(8.0, 24.0)
 	buff_hud.size = Vector2(300.0, 14.0)
 	_hud_layer.add_child(buff_hud)
+	Game.add_hard_mode_hud_label(_hud_layer)
 
 	_fade_rect = ColorRect.new()
 	_fade_rect.color = Color(0.0, 0.0, 0.0, 1.0)

@@ -267,19 +267,23 @@ func _spawn_room_b() -> void:
 	brute.position = ROOM_B_BRUTE_POS
 	brute.patrol_min_x = ROOM_B_BRUTE_PATROL.x
 	brute.patrol_max_x = ROOM_B_BRUTE_PATROL.y
+	Game.apply_difficulty_to_enemy(brute)
 	add_child(brute)
 	var spitter: Spitter = SPITTER_SCENE.instantiate() as Spitter
 	spitter.position = ROOM_B_SPITTER_POS
+	Game.apply_difficulty_to_enemy(spitter)
 	add_child(spitter)
 	var shield: Shieldbearer = SHIELDBEARER_SCENE.instantiate() as Shieldbearer
 	shield.position = ROOM_B_SHIELDBEARER_POS
 	shield.patrol_min_x = ROOM_B_SHIELD_PATROL.x
 	shield.patrol_max_x = ROOM_B_SHIELD_PATROL.y
+	Game.apply_difficulty_to_enemy(shield)
 	add_child(shield)
 	var lancer: Lancer = LANCER_SCENE.instantiate() as Lancer
 	lancer.position = ROOM_B_LANCER_POS
 	lancer.patrol_min_x = ROOM_B_LANCER_PATROL.x
 	lancer.patrol_max_x = ROOM_B_LANCER_PATROL.y
+	Game.apply_difficulty_to_enemy(lancer)
 	add_child(lancer)
 
 
@@ -313,6 +317,7 @@ func _spawn_boss() -> void:
 	_boss = AXIS_OMEGA_SCENE.instantiate() as AxisOmega
 	_boss.position = BOSS_SPAWN
 	_boss.teleport_anchors = BOSS_ANCHORS
+	Game.apply_difficulty_to_boss(_boss)
 	add_child(_boss)
 	_boss.died.connect(_on_boss_defeated)
 
@@ -357,6 +362,7 @@ func _build_hud() -> void:
 	buff_hud.position = Vector2(HUD_MARGIN, BUFF_Y)
 	buff_hud.size = Vector2(BUFF_WIDTH, BUFF_HEIGHT)
 	_hud_layer.add_child(buff_hud)
+	Game.add_hard_mode_hud_label(_hud_layer)
 	_fade_rect = ColorRect.new()
 	_fade_rect.color = Color.BLACK
 	_fade_rect.position = Vector2.ZERO

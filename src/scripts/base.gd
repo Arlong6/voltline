@@ -320,6 +320,7 @@ func _build_hud() -> void:
 	hint.position = Vector2(HUD_MARGIN.x, HUD_MARGIN.y + 16.0)
 	hint.size = Vector2(180.0, 14.0)
 	hud.add_child(hint)
+	Game.add_hard_mode_hud_label(hud)
 	_prompt_label = Label.new()
 	_prompt_label.text = "X"
 	_prompt_label.add_theme_font_size_override("font_size", HUD_TITLE_SIZE)

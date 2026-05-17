@@ -612,7 +612,7 @@ func _on_enemy_hit(body: Node2D) -> void:
 	if Game.test_mode:
 		return
 	if body is Enemy and body.is_alive:
-		take_damage(contact_damage)
+		take_damage(body.contact_damage)
 
 
 ## Inflicts `amount` damage. No-op while invincible (post-hit blink OR

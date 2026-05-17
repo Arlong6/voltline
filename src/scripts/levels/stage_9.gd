@@ -217,6 +217,7 @@ func _spawn_room_a() -> void:
 		lancer.position = Vector2(entry.x, entry.y)
 		lancer.patrol_min_x = entry.z
 		lancer.patrol_max_x = entry.w
+		Game.apply_difficulty_to_enemy(lancer)
 		add_child(lancer)
 	var switch_panel: SwitchPanel = SWITCH_SCENE.instantiate() as SwitchPanel
 	switch_panel.position = ROOM_A_SWITCH_POS
@@ -233,10 +234,12 @@ func _spawn_room_b() -> void:
 	var stalker_a: Stalker = STALKER_SCENE.instantiate() as Stalker
 	stalker_a.position = ROOM_B_STALKER_A_POS
 	stalker_a.hover_offset_y = ROOM_B_STALKER_A_HOVER
+	Game.apply_difficulty_to_enemy(stalker_a)
 	add_child(stalker_a)
 	var stalker_b: Stalker = STALKER_SCENE.instantiate() as Stalker
 	stalker_b.position = ROOM_B_STALKER_B_POS
 	stalker_b.hover_offset_y = ROOM_B_STALKER_B_HOVER
+	Game.apply_difficulty_to_enemy(stalker_b)
 	add_child(stalker_b)
 
 	var laser_a: LaserBeam = LASER_SCENE.instantiate() as LaserBeam
@@ -280,6 +283,7 @@ func _spawn_boss() -> void:
 	_boss = VEIN_K_SCENE.instantiate() as VeinK
 	_boss.position = BOSS_SPAWN
 	_boss.teleport_anchors = BOSS_AREA
+	Game.apply_difficulty_to_boss(_boss)
 	add_child(_boss)
 	_boss.died.connect(_on_boss_defeated)
 
@@ -330,6 +334,7 @@ func _build_hud() -> void:
 	buff_hud.position = Vector2(HUD_MARGIN, BUFF_Y)
 	buff_hud.size = Vector2(BUFF_WIDTH, BUFF_HEIGHT)
 	_hud_layer.add_child(buff_hud)
+	Game.add_hard_mode_hud_label(_hud_layer)
 
 	_fade_rect = ColorRect.new()
 	_fade_rect.color = Color.BLACK

@@ -214,10 +214,12 @@ func _spawn_room_a() -> void:
 		enemy.patrol_max_x = float(entry[2])
 		enemy.max_hp = 5
 		enemy.walk_speed = 70.0
+		Game.apply_difficulty_to_enemy(enemy)
 		add_child(enemy)
 	# Turret on the central platform.
 	var turret: Turret = TURRET_SCENE.instantiate() as Turret
 	turret.position = ROOM_A_TURRET
+	Game.apply_difficulty_to_enemy(turret)
 	add_child(turret)
 	# Shieldbearer guarding the corridor — can't be shot from the front,
 	# the player has to dash past it or catch its exposed back at a wall.
@@ -225,6 +227,7 @@ func _spawn_room_a() -> void:
 	shieldbearer.position = Vector2(400.0, 168.0)
 	shieldbearer.patrol_min_x = 320.0
 	shieldbearer.patrol_max_x = 420.0
+	Game.apply_difficulty_to_enemy(shieldbearer)
 	add_child(shieldbearer)
 	# Switch panel high on the right wall + the door blocking the exit.
 	var switch_panel: SwitchPanel = SWITCH_SCENE.instantiate() as SwitchPanel
@@ -264,6 +267,7 @@ func _spawn_room_b() -> void:
 	# up onto the platforms while the player is mid-climb.
 	var spitter: Spitter = SPITTER_SCENE.instantiate() as Spitter
 	spitter.position = Vector2(700.0, 170.0)
+	Game.apply_difficulty_to_enemy(spitter)
 	add_child(spitter)
 	# Switch on the high platform + door at the end of Room B.
 	var switch_panel: SwitchPanel = SWITCH_SCENE.instantiate() as SwitchPanel
@@ -286,6 +290,7 @@ func _spawn_checkpoint() -> void:
 func _spawn_tyrant() -> void:
 	_tyrant = TYRANT_SCENE.instantiate() as TyrantZ
 	_tyrant.position = TYRANT_SPAWN
+	Game.apply_difficulty_to_boss(_tyrant)
 	add_child(_tyrant)
 	_tyrant.died.connect(_on_tyrant_defeated)
 
@@ -338,6 +343,7 @@ func _build_hud() -> void:
 	buff_hud.position = Vector2(8.0, 24.0)
 	buff_hud.size = Vector2(300.0, 14.0)
 	_hud_layer.add_child(buff_hud)
+	Game.add_hard_mode_hud_label(_hud_layer)
 
 	_fade_rect = ColorRect.new()
 	_fade_rect.color = Color(0.0, 0.0, 0.0, 1.0)

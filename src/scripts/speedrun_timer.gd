@@ -28,6 +28,8 @@ func _process(_delta: float) -> void:
 
 ## Returns the personal-best time for the current stage, or INF if none.
 func current_pb() -> float:
+	if Game.hard_mode:
+		return float(Game.best_times_hard.get(Game.current_area, INF))
 	return float(Game.best_times.get(Game.current_area, INF))
 
 

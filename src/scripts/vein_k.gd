@@ -49,6 +49,7 @@ func _ready() -> void:
 	boss_name = BOSS_LABEL
 	max_hp = MAX_HP
 	bullet_speed = BULLET_SPEED
+	Game.apply_difficulty_to_boss(self)
 	hp = max_hp
 	_teleport_timer = _current_interval() * INITIAL_TIMER_SCALE
 	_anchor_index = _nearest_anchor_index()

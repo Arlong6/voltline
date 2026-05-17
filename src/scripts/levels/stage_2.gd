@@ -224,6 +224,7 @@ func _spawn_enemies() -> void:
 		enemy.patrol_max_x = max_x
 		enemy.max_hp = ENEMY_HP
 		enemy.walk_speed = ENEMY_SPEED
+		Game.apply_difficulty_to_enemy(enemy)
 		add_child(enemy)
 
 
@@ -253,6 +254,7 @@ func _spawn_boss() -> void:
 	_boss.shoot_interval = BOSS_SHOOT_INTERVAL
 	_boss.bullet_speed = BOSS_BULLET_SPEED
 	_boss.position = BOSS_SPAWN
+	Game.apply_difficulty_to_boss(_boss)
 	add_child(_boss)
 	_boss.died.connect(_on_boss_defeated)
 
@@ -307,6 +309,7 @@ func _build_hud() -> void:
 	buff_hud.position = Vector2(8.0, 24.0)
 	buff_hud.size = Vector2(300.0, 14.0)
 	_hud_layer.add_child(buff_hud)
+	Game.add_hard_mode_hud_label(_hud_layer)
 
 	# Fade overlay — last child so it covers every other HUD element.
 	_fade_rect = ColorRect.new()

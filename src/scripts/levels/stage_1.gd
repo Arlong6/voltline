@@ -208,6 +208,7 @@ func _spawn_enemies() -> void:
 		enemy.patrol_max_x = max_x
 		enemy.max_hp = ENEMY_HP
 		enemy.walk_speed = ENEMY_SPEED
+		Game.apply_difficulty_to_enemy(enemy)
 		add_child(enemy)
 
 
@@ -309,6 +310,7 @@ func _build_hud() -> void:
 	buff_hud.position = Vector2(8.0, 24.0)
 	buff_hud.size = Vector2(300.0, 14.0)
 	_hud_layer.add_child(buff_hud)
+	Game.add_hard_mode_hud_label(_hud_layer)
 
 	# Fade overlay — added last so it sits on top of every other HUD
 	# element. Starts opaque (we just transitioned in from black) and

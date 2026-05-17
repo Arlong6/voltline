@@ -33,6 +33,7 @@ func _ready() -> void:
 	bullet_initial_delay = 1.4
 	hop_interval = 1.8
 	hop_velocity = -260.0
+	Game.apply_difficulty_to_boss(self)
 	hp = max_hp
 	_shoot_timer = bullet_initial_delay
 	_hop_timer = hop_interval * 0.5

@@ -35,6 +35,9 @@ extends CharacterBody2D
 ## do 1. Tune per stage to escalate difficulty.
 @export var max_hp: int = 2
 
+## Damage this enemy deals when overlapping the player's hurt detector.
+@export var contact_damage: int = 2
+
 # ---------------------------------------------------------------------------
 # Public state
 # ---------------------------------------------------------------------------

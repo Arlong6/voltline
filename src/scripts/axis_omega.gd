@@ -99,6 +99,7 @@ func _ready() -> void:
 	hop_interval = PHASE_1_HOP_INTERVAL
 	hop_velocity = PHASE_1_HOP_VELOCITY
 	shoot_interval = PHASE_1_SHOOT_INTERVAL
+	Game.apply_difficulty_to_boss(self)
 	_shoot_timer = INITIAL_SHOOT_TIMER
 	_hop_timer = hop_interval * 0.5
 	_anchor_index = _nearest_anchor_index()
@@ -133,12 +134,18 @@ func tick_phase_state() -> void:
 	_uses_teleport = _is_phase_2() or _is_phase_3()
 	if _is_phase_2():
 		shoot_interval = PHASE_2_SHOOT_INTERVAL
+		if Game.hard_mode:
+			shoot_interval *= Game.HARD_BOSS_INTERVAL_MULTIPLIER
 		_teleport_timer = minf(_teleport_timer, PHASE_2_TELEPORT_INTERVAL)
 	elif _is_phase_3():
 		shoot_interval = PHASE_3_SHOOT_INTERVAL
+		if Game.hard_mode:
+			shoot_interval *= Game.HARD_BOSS_INTERVAL_MULTIPLIER
 		_teleport_timer = minf(_teleport_timer, PHASE_3_TELEPORT_INTERVAL)
 	elif _is_phase_1():
 		shoot_interval = PHASE_1_SHOOT_INTERVAL
+		if Game.hard_mode:
+			shoot_interval *= Game.HARD_BOSS_INTERVAL_MULTIPLIER
 
 
 ## Advances the AXIS-Ω teleport cadence and fires radial_8 on appear.
@@ -297,6 +304,7 @@ func _spawn_minion() -> void:
 	minion.global_position = global_position + Vector2(randf_range(-18.0, 18.0), -20.0)
 	minion.patrol_min_x = global_position.x - OUTER_RING_RADIUS
 	minion.patrol_max_x = global_position.x + OUTER_RING_RADIUS
+	Game.apply_difficulty_to_enemy(minion)
 	parent.add_child(minion)
 
 

@@ -54,6 +54,7 @@ func _ready() -> void:
 	bullet_initial_delay = 1.6
 	hop_interval = 1.5
 	hop_velocity = -300.0
+	Game.apply_difficulty_to_boss(self)
 	hp = max_hp
 	_shoot_timer = bullet_initial_delay
 	_hop_timer = hop_interval * 0.5
@@ -107,6 +108,7 @@ func _summon_minion(use_kamikaze: bool) -> void:
 		kami.hover_y = global_position.y - 60.0
 		kami.patrol_min_x = global_position.x - 80.0
 		kami.patrol_max_x = global_position.x + 80.0
+		Game.apply_difficulty_to_enemy(kami)
 		parent.add_child(kami)
 	else:
 		var drone: Drone = _DRONE_SCENE.instantiate() as Drone
@@ -116,6 +118,7 @@ func _summon_minion(use_kamikaze: bool) -> void:
 		drone.patrol_max_x = global_position.x + 100.0
 		drone.max_hp = 3
 		drone.walk_speed = 70.0
+		Game.apply_difficulty_to_enemy(drone)
 		parent.add_child(drone)
 
 

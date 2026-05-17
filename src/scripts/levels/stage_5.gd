@@ -218,6 +218,7 @@ func _spawn_enemies() -> void:
 		enemy.patrol_max_x = max_x
 		enemy.max_hp = ENEMY_HP
 		enemy.walk_speed = ENEMY_SPEED
+		Game.apply_difficulty_to_enemy(enemy)
 		add_child(enemy)
 
 
@@ -234,6 +235,7 @@ func _spawn_drones() -> void:
 		drone.patrol_max_x = max_x
 		drone.max_hp = DRONE_HP
 		drone.walk_speed = DRONE_SPEED
+		Game.apply_difficulty_to_enemy(drone)
 		add_child(drone)
 
 
@@ -242,6 +244,7 @@ func _spawn_brute() -> void:
 	brute.position = BRUTE_SPAWN
 	brute.patrol_min_x = BRUTE_MIN_X
 	brute.patrol_max_x = BRUTE_MAX_X
+	Game.apply_difficulty_to_enemy(brute)
 	add_child(brute)
 
 
@@ -251,6 +254,7 @@ func _spawn_kamikaze() -> void:
 	kami.hover_y = KAMIKAZE_POS.y
 	kami.patrol_min_x = KAMIKAZE_POS.x - 60.0
 	kami.patrol_max_x = KAMIKAZE_POS.x + 60.0
+	Game.apply_difficulty_to_enemy(kami)
 	add_child(kami)
 
 
@@ -279,6 +283,7 @@ func _spawn_turrets() -> void:
 	for pos in TURRET_POSITIONS:
 		var turret: Turret = TURRET_SCENE.instantiate() as Turret
 		turret.position = pos
+		Game.apply_difficulty_to_enemy(turret)
 		add_child(turret)
 
 
@@ -315,6 +320,7 @@ func _spawn_player_with_camera() -> void:
 func _spawn_tyrant2() -> void:
 	_tyrant2 = TYRANT2_SCENE.instantiate() as TyrantZ2
 	_tyrant2.position = TYRANT_SPAWN
+	Game.apply_difficulty_to_boss(_tyrant2)
 	add_child(_tyrant2)
 	_tyrant2.died.connect(_on_tyrant2_defeated)
 
@@ -367,6 +373,7 @@ func _build_hud() -> void:
 	buff_hud.position = Vector2(8.0, 24.0)
 	buff_hud.size = Vector2(300.0, 14.0)
 	_hud_layer.add_child(buff_hud)
+	Game.add_hard_mode_hud_label(_hud_layer)
 
 	_fade_rect = ColorRect.new()
 	_fade_rect.color = Color(0.0, 0.0, 0.0, 1.0)

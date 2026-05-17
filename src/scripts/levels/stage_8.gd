@@ -194,16 +194,19 @@ func _spawn_room_a() -> void:
 		sb.patrol_min_x = float(entry[1])
 		sb.patrol_max_x = float(entry[2])
 		sb.max_hp = 6
+		Game.apply_difficulty_to_enemy(sb)
 		add_child(sb)
 	# One Spitter behind them lobbing arcing fire over the platform.
 	var spitter: Spitter = SPITTER_SCENE.instantiate() as Spitter
 	spitter.position = ROOM_A_SPITTER_POS
+	Game.apply_difficulty_to_enemy(spitter)
 	add_child(spitter)
 	# v0.68 — a Lancer guards the door corner; telegraphs then commits.
 	var lancer: Lancer = LANCER_SCENE.instantiate() as Lancer
 	lancer.position = Vector2(400.0, 168.0)
 	lancer.patrol_min_x = 340.0
 	lancer.patrol_max_x = 430.0
+	Game.apply_difficulty_to_enemy(lancer)
 	add_child(lancer)
 	# Switch on the high wall — must be hit with a charged shot or wave.
 	var switch_panel: SwitchPanel = SWITCH_SCENE.instantiate() as SwitchPanel
@@ -254,6 +257,7 @@ func _spawn_room_b() -> void:
 	var stalker: Stalker = STALKER_SCENE.instantiate() as Stalker
 	stalker.position = Vector2(700.0, 80.0)
 	stalker.hover_offset_y = -56.0
+	Game.apply_difficulty_to_enemy(stalker)
 	add_child(stalker)
 	# Switch + exit door.
 	var switch_panel: SwitchPanel = SWITCH_SCENE.instantiate() as SwitchPanel
@@ -276,6 +280,7 @@ func _spawn_checkpoint() -> void:
 func _spawn_boss() -> void:
 	_boss = GRID_ZERO_SCENE.instantiate() as GridZero
 	_boss.position = BOSS_SPAWN
+	Game.apply_difficulty_to_boss(_boss)
 	add_child(_boss)
 	_boss.died.connect(_on_boss_defeated)
 
@@ -327,6 +332,7 @@ func _build_hud() -> void:
 	buff_hud.position = Vector2(8.0, 24.0)
 	buff_hud.size = Vector2(300.0, 14.0)
 	_hud_layer.add_child(buff_hud)
+	Game.add_hard_mode_hud_label(_hud_layer)
 
 	_fade_rect = ColorRect.new()
 	_fade_rect.color = Color(0.0, 0.0, 0.0, 1.0)
