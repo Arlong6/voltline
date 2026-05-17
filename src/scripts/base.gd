@@ -169,9 +169,7 @@ func _interact_with_npc(npc_name: String) -> void:
 		"AKI":
 			Game.play_cutscene("AKI // COMMAND", AKI_LINES, "base")
 		"NIX":
-			# TODO: route to skin_shop after dialogue when a dedicated scene exists.
-			var next_key: String = "skin_shop" if Game.LEVEL_PATHS.has("skin_shop") else "base"
-			Game.play_cutscene("NIX // TECH", NIX_LINES, next_key)
+			Game.play_cutscene("NIX // TECH", NIX_LINES, "skin_shop")
 
 
 func _spawn_player() -> void:
